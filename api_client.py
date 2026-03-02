@@ -94,3 +94,31 @@ def admin_onayla(kurum_id):
 
 def admin_pasif(kurum_id):
     return _handle(requests.post(f"{API_URL}/api/admin/kurumlar/{kurum_id}/pasif", headers=_headers()))
+
+def admin_resend_onay_mail(kurum_id):
+    """
+    Bekleyen kurum için onay/e-posta bildirimi tekrar tetikler.
+    Backend sürümleri arasında endpoint adı değişebildiği için
+    birkaç olası route'u sırayla dener.
+    """
+    candidates = [
+        f"{API_URL}/api/admin/kurumlar/{kurum_id}/resend-onay-mail",
+        f"{API_URL}/api/admin/kurumlar/{kurum_id}/resend",
+        f"{API_URL}/api/admin/kurumlar/{kurum_id}/resend-email",
+    ]
+
+    last_error = None
+    for url in candidates:
+        resp = requests.post(url, headers=_headers())
+        if resp.status_code == 404:
+            continue
+        if 200 <= resp.status_code < 300:
+            return resp.json() if resp.content else {"ok": True}
+        last_error = resp
+        break
+
+    if last_error is not None:
+        _handle(last_error)
+    else:
+        st.error("Resend entegrasyonu için uygun endpoint bulunamadı.")
+    return None
