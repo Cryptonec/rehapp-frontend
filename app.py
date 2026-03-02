@@ -28,29 +28,6 @@ if params.get("p") == "login" and not st.session_state.get("token"):
 # LANDING PAGE — saf HTML, Streamlit widget YOK
 # ══════════════════════════════════════════════════════════════════════════════
 def landing_sayfasi():
-    # Streamlit native butonu — CSS ile sağ üste sabitlenir
-    # Bu landing'de tek Streamlit widget'ı — st.stop() öncesinde render edilmeli
-    st.markdown("""
-    <style>
-    div[data-testid="stVerticalBlock"] > div:first-child .stButton {
-        position:fixed !important; top:12px !important; right:20px !important;
-        z-index:99999 !important; width:auto !important;
-    }
-    div[data-testid="stVerticalBlock"] > div:first-child .stButton > button {
-        background:linear-gradient(135deg,#38C9C0,#2756D6) !important;
-        color:#ffffff !important; -webkit-text-fill-color:#ffffff !important;
-        font-family:Sora,sans-serif !important; font-weight:700 !important;
-        font-size:14px !important; border-radius:50px !important; border:none !important;
-        padding:10px 22px !important; white-space:nowrap !important;
-        box-shadow:0 4px 16px rgba(56,201,192,.4) !important;
-        height:auto !important; min-height:0 !important;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-    if st.button("Giriş Yap / Kayıt Ol →"):
-        st.session_state["page"] = "login"
-        st.rerun()
-
     st.markdown("""<!DOCTYPE html>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&display=swap');
