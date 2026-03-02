@@ -37,6 +37,18 @@ def show():
         st.info("Kurum bulunamadı.")
         return
 
+    def kurum_id(kurum):
+        for key in ("id", "kurum_id", "institution_id", "user_id"):
+            if kurum.get(key) is not None:
+                return kurum.get(key)
+        return None
+
+    def kurum_ad(kurum):
+        return kurum.get("ad") or kurum.get("name") or "İsimsiz Kurum"
+
+    def kurum_email(kurum):
+        return kurum.get("email") or kurum.get("mail") or "-"
+
     def onaylandi_mi(kurum):
         if "onaylandi" in kurum:
             return bool(kurum.get("onaylandi"))
@@ -74,18 +86,22 @@ def show():
         </div>""", unsafe_allow_html=True)
 
         for k in bekleyen:
-            with st.expander(f"⏳ {k['ad']}  ·  {k['email']}"):
+            kid = kurum_id(k)
+            with st.expander(f"⏳ {kurum_ad(k)}  ·  {kurum_email(k)}"):
                 c1, c2, c3 = st.columns(3)
-                c1.markdown(f"**E-posta**  \n{k['email']}")
+                c1.markdown(f"**E-posta**  \n{kurum_email(k)}")
                 c2.markdown(f"**Kayıt**  \n{k.get('created_at','')[:10]}")
                 c3.markdown(f"**Öğrenci**  \n{k.get('ogrenci_sayisi', 0)}")
+                if kid is None:
+                    st.warning("Bu kayıtta kurum id bulunamadığı için işlem yapılamıyor.")
+                    continue
                 b1, b2 = st.columns(2)
-                if b1.button("✅ Onayla", key=f"onayla_{k['id']}", type="primary", use_container_width=True):
-                    if api.admin_onayla(k["id"]):
+                if b1.button("✅ Onayla", key=f"onayla_{kid}", type="primary", use_container_width=True):
+                    if api.admin_onayla(kid):
                         st.success("Onaylandı!")
                         st.rerun()
-                if b2.button("✉️ Resend", key=f"resend_{k['id']}", use_container_width=True):
-                    if api.admin_resend_onay_mail(k["id"]):
+                if b2.button("✉️ Resend", key=f"resend_{kid}", use_container_width=True):
+                    if api.admin_resend_onay_mail(kid):
                         st.success("Resend talebi gönderildi.")
 
     # ── Aktif Kurumlar ────────────────────────────────────────────────────────
@@ -96,15 +112,20 @@ def show():
 
     for k in aktif:
         sg = sor_son_giris(k.get("son_giris"))
-        with st.expander(f"✅ {k['ad']}  ·  Son giriş: {sg}"):
+        kid = kurum_id(k)
+        with st.expander(f"✅ {kurum_ad(k)}  ·  Son giriş: {sg}"):
             c1, c2, c3, c4 = st.columns(4)
-            c1.markdown(f"**E-posta**  \n{k['email']}")
+            c1.markdown(f"**E-posta**  \n{kurum_email(k)}")
             c2.markdown(f"**Kayıt**  \n{k.get('created_at','')[:10]}")
             c3.markdown(f"**Öğrenci**  \n{k.get('ogrenci_sayisi', 0)}")
             c4.markdown(f"**Son giriş**  \n{sg}")
 
-            if st.button("🚫 Pasif Yap", key=f"pasif_{k['id']}"):
-                if api.admin_pasif(k["id"]):
+            if kid is None:
+                st.warning("Bu kayıtta kurum id bulunamadığı için pasif işlemi yapılamıyor.")
+                continue
+
+            if st.button("🚫 Pasif Yap", key=f"pasif_{kid}"):
+                if api.admin_pasif(kid):
                     st.warning("Pasif yapıldı.")
                     st.rerun()
 
@@ -115,8 +136,8 @@ def show():
         unsafe_allow_html=True)
 
         for k in pasif:
-            with st.expander(f"🚫 {k['ad']}  ·  {k['email']}"):
+            with st.expander(f"🚫 {kurum_ad(k)}  ·  {kurum_email(k)}"):
                 c1, c2, c3 = st.columns(3)
-                c1.markdown(f"**E-posta**  \n{k['email']}")
+                c1.markdown(f"**E-posta**  \n{kurum_email(k)}")
                 c2.markdown(f"**Kayıt**  \n{k.get('created_at','')[:10]}")
                 c3.markdown(f"**Öğrenci**  \n{k.get('ogrenci_sayisi', 0)}")
