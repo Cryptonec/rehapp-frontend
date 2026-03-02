@@ -117,6 +117,8 @@ def _parse_kurum_list(data):
 
 
 def admin_get_kurumlar():
+    unexpected_format_seen = False
+
     for resource in _admin_resource_paths():
         for url in _admin_list_paths(resource):
             resp = requests.get(url, headers=_headers())
@@ -131,10 +133,12 @@ def admin_get_kurumlar():
             if kurumlar is not None:
                 return kurumlar
 
-            st.error("Kurum listesi yanıt formatı beklenenden farklı.")
-            return []
+            unexpected_format_seen = True
 
-    logger.warning("Admin kurum listesi endpoint'i bulunamadı.")
+    if unexpected_format_seen:
+        st.error("Kurum listesi yanıt formatı beklenenden farklı.")
+    else:
+        logger.warning("Admin kurum listesi endpoint'i bulunamadı.")
     return []
 
 
@@ -148,6 +152,7 @@ def _admin_action_urls(resource, kurum_id, action_suffix):
 
 def _admin_action_post(kurum_id, action_suffixes):
     last_error = None
+
     for resource in _admin_resource_paths():
         for action_suffix in action_suffixes:
             for url in _admin_action_urls(resource, kurum_id, action_suffix):
@@ -157,11 +162,6 @@ def _admin_action_post(kurum_id, action_suffixes):
                 if 200 <= resp.status_code < 300:
                     return resp.json() if resp.content else {"ok": True}
                 last_error = resp
-                break
-            if last_error is not None:
-                break
-        if last_error is not None:
-            break
 
     if last_error is not None:
         return _handle(last_error)
