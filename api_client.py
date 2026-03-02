@@ -86,14 +86,80 @@ def delete_saved_group(gid):
     return requests.delete(f"{API_URL}/api/saved-groups/{gid}", headers=_headers()).status_code == 204
 
 # ── Admin ─────────────────────────────────────────────────────────────────────
+def _admin_resource_paths():
+    return [
+        "kurumlar",
+        "kurum",
+        "institutions",
+        "institution",
+        "organizations",
+        "orgs",
+    ]
+
+
+def _parse_kurum_list(data):
+    if isinstance(data, list):
+        return data
+    if isinstance(data, dict):
+        for key in ("items", "results", "data", "kurumlar", "institutions", "organizations"):
+            value = data.get(key)
+            if isinstance(value, list):
+                return value
+    return None
+
+
 def admin_get_kurumlar():
-    return _handle(requests.get(f"{API_URL}/api/admin/kurumlar", headers=_headers())) or []
+    for resource in _admin_resource_paths():
+        for suffix in ("", "/"):
+            url = f"{API_URL}/api/admin/{resource}{suffix}"
+            resp = requests.get(url, headers=_headers())
+            if resp.status_code == 404:
+                continue
+
+            data = _handle(resp)
+            if data is None:
+                return []
+
+            kurumlar = _parse_kurum_list(data)
+            if kurumlar is not None:
+                return kurumlar
+
+            st.error("Kurum listesi yanıt formatı beklenenden farklı.")
+            return []
+
+    logger.warning("Admin kurum listesi endpoint'i bulunamadı.")
+    return []
+
+
+def _admin_action_post(kurum_id, action_suffixes):
+    last_error = None
+    for resource in _admin_resource_paths():
+        for action_suffix in action_suffixes:
+            url = f"{API_URL}/api/admin/{resource}/{kurum_id}/{action_suffix}"
+            resp = requests.post(url, headers=_headers())
+            if resp.status_code == 404:
+                continue
+            if 200 <= resp.status_code < 300:
+                return resp.json() if resp.content else {"ok": True}
+            last_error = resp
+            break
+        if last_error is not None:
+            break
+
+    if last_error is not None:
+        return _handle(last_error)
+
+    st.error("Admin işlemi için uygun endpoint bulunamadı.")
+    return None
+
 
 def admin_onayla(kurum_id):
-    return _handle(requests.post(f"{API_URL}/api/admin/kurumlar/{kurum_id}/onayla", headers=_headers()))
+    return _admin_action_post(kurum_id, ("onayla", "approve", "activate"))
+
 
 def admin_pasif(kurum_id):
-    return _handle(requests.post(f"{API_URL}/api/admin/kurumlar/{kurum_id}/pasif", headers=_headers()))
+    return _admin_action_post(kurum_id, ("pasif", "deactivate", "disable"))
+
 
 def admin_resend_onay_mail(kurum_id):
     """
@@ -101,24 +167,7 @@ def admin_resend_onay_mail(kurum_id):
     Backend sürümleri arasında endpoint adı değişebildiği için
     birkaç olası route'u sırayla dener.
     """
-    candidates = [
-        f"{API_URL}/api/admin/kurumlar/{kurum_id}/resend-onay-mail",
-        f"{API_URL}/api/admin/kurumlar/{kurum_id}/resend",
-        f"{API_URL}/api/admin/kurumlar/{kurum_id}/resend-email",
-    ]
-
-    last_error = None
-    for url in candidates:
-        resp = requests.post(url, headers=_headers())
-        if resp.status_code == 404:
-            continue
-        if 200 <= resp.status_code < 300:
-            return resp.json() if resp.content else {"ok": True}
-        last_error = resp
-        break
-
-    if last_error is not None:
-        _handle(last_error)
-    else:
-        st.error("Resend entegrasyonu için uygun endpoint bulunamadı.")
-    return None
+    return _admin_action_post(
+        kurum_id,
+        ("resend-onay-mail", "resend", "resend-email", "resend-approval-mail", "resend-approval"),
+    )
