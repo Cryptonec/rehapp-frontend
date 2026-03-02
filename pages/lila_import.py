@@ -1,7 +1,7 @@
 """
 Lila XLS / XLSX import modülü.
-Öğrenciler sekmesinin içinden çağrılır.
-Sadece GRUP eğitimi alan öğrenciler ve sadece grup eğitimi verilebilen modüller alınır.
+Sadece GRUP eğitimi alan öğrenciler, sadece grup eğitimi verilebilen modüller.
+Önizleme tablosunda ham kodlar gösterilmez.
 """
 import re
 import io
@@ -12,373 +12,232 @@ from datetime import date, timedelta, datetime
 import streamlit as st
 import api_client as api
 
-# ── Tanı → Grup Modül Haritası (sadece grup eğitimi verilenler) ───────────────
 TANI_MODUL_MAP = {
-    "Bedensel Yetersizliği Olan Bireyler İçin Destek Eğitim Programı": [
-        "Günlük Yaşam Aktiviteleri",
-    ],
-    "Dil ve Konuşma Bozukluğu Olan Bireyler İçin Destek Eğitim Programı": [
-        "Dil",
-    ],
+    "Bedensel Yetersizliği Olan Bireyler İçin Destek Eğitim Programı": ["Günlük Yaşam Aktiviteleri"],
+    "Dil ve Konuşma Bozukluğu Olan Bireyler İçin Destek Eğitim Programı": ["Dil"],
     "Görme Yetersizliği Olan Bireyler İçin Destek Eğitim Programı": [
-        "Dil ve İletişim", "Erken Matematik", "Günlük Yaşam Becerileri",
-        "Matematik", "Okuma ve Yazma", "Sosyal Beceriler", "Toplumsal Yaşam Becerileri",
-    ],
+        "Dil ve İletişim","Erken Matematik","Günlük Yaşam Becerileri",
+        "Matematik","Okuma ve Yazma","Sosyal Beceriler","Toplumsal Yaşam Becerileri"],
     "İşitme Yetersizliği Olan Bireyler İçin Destek Eğitim Programı": [
-        "Erken Matematik", "Matematik", "Okuma ve Yazma", "Sosyal İletişim",
-    ],
+        "Erken Matematik","Matematik","Okuma ve Yazma","Sosyal İletişim"],
     "Otizm Spektrum Bozukluğu Olan Bireyler İçin Destek Eğitim Programı": [
-        "Birey ve Çevre", "Dil, İletişim ve Oyun", "Erken Matematik",
-        "Günlük Yaşam Becerileri", "Matematik", "Okuma ve Yazma",
-        "Sosyal Beceriler", "Toplumsal Yaşam Becerileri",
-    ],
+        "Birey ve Çevre","Dil, İletişim ve Oyun","Erken Matematik",
+        "Günlük Yaşam Becerileri","Matematik","Okuma ve Yazma",
+        "Sosyal Beceriler","Toplumsal Yaşam Becerileri"],
     "Öğrenme Güçlüğü Olan Bireyler İçin Destek Eğitim Programı": [
-        "Dil ve İletişim", "Erken Matematik", "Matematik", "Okuma ve Yazma", "Sosyal Etkileşim",
-    ],
+        "Dil ve İletişim","Erken Matematik","Matematik","Okuma ve Yazma","Sosyal Etkileşim"],
     "Zihinsel Yetersizliği Olan Bireyler İçin Destek Eğitim Programı": [
-        "Birey ve Çevre", "Dil, İletişim ve Oyun", "Erken Matematik",
-        "Günlük Yaşam Becerileri", "Matematik", "Okuma ve Yazma",
-        "Sosyal Beceriler", "Toplumsal Yaşam Becerileri",
-    ],
+        "Birey ve Çevre","Dil, İletişim ve Oyun","Erken Matematik",
+        "Günlük Yaşam Becerileri","Matematik","Okuma ve Yazma",
+        "Sosyal Beceriler","Toplumsal Yaşam Becerileri"],
 }
 
+def normalize(s):
+    return " ".join(unicodedata.normalize("NFC", s).split()).strip()
 
-def normalize(s: str) -> str:
-    s = unicodedata.normalize("NFC", s)
-    return " ".join(s.split()).strip()
-
-
-def modul_from_tani(taniler: list) -> list:
+def modul_from_tani(taniler):
     moduller = set()
     for tani in taniler:
-        tani_norm = normalize(tani)
+        tn = normalize(tani)
         for key, mods in TANI_MODUL_MAP.items():
-            if normalize(key) == tani_norm or normalize(key) in tani_norm:
+            if normalize(key) == tn or normalize(key) in tn:
                 moduller.update(mods)
     return sorted(moduller)
 
-
-def excel_serial_to_date(serial: str):
+def excel_serial(s):
     try:
-        n = int(float(serial))
-        if n <= 0:
-            return None
-        return (date(1899, 12, 30) + timedelta(days=n)).isoformat()
-    except Exception:
+        n = int(float(s))
+        return (date(1899,12,30) + timedelta(days=n)).isoformat() if n > 0 else None
+    except:
         return None
 
-
-# ── XLS Parser (HTML tabanlı, eski projeden) ──────────────────────────────────
-def parse_xls(file_bytes: bytes) -> list:
-    content = file_bytes.decode("utf-8", errors="ignore")
-    rows = re.findall(r'<tr[^>]*>(.*?)</tr>', content, re.DOTALL | re.IGNORECASE)
-
+def parse_xls(fb):
+    content = fb.decode("utf-8", errors="ignore")
+    rows = re.findall(r'<tr[^>]*>(.*?)</tr>', content, re.DOTALL|re.IGNORECASE)
     parsed = []
     for row in rows:
-        cells = re.findall(r'<t[dh][^>]*>(.*?)</t[dh]>', row, re.DOTALL | re.IGNORECASE)
-        cells = [re.sub(r'<[^>]+>', '', c).strip() for c in cells]
+        cells = re.findall(r'<t[dh][^>]*>(.*?)</t[dh]>', row, re.DOTALL|re.IGNORECASE)
+        cells = [re.sub(r'<[^>]+>','',c).strip() for c in cells]
         parsed.append(cells)
-
     if len(parsed) < 3:
         return []
-
     headers = parsed[2]
-    data_rows = parsed[3:]
-
-    def col(name):
-        try:
-            return headers.index(name)
-        except ValueError:
-            return None
-
-    idx_adi         = col("ADI")
-    idx_soyadi      = col("SOYADI")
-    idx_dob         = col("DOĞUM TARİHİ")
-    idx_program     = col("EĞİTİM PROGRAMI")
-    idx_rapor_bitis = col("BİTİŞ TARİHİ")
-    idx_sekil       = col("EĞİTSEL TANI VE EĞİTİM ÖNERİSİ")
-
-    students = []
-    seen = set()
-
-    for row in data_rows:
-        if not row:
-            continue
-        sekil = row[idx_sekil].strip().upper() if idx_sekil is not None and len(row) > idx_sekil else ""
-        if "GRUP" not in sekil:
-            continue
-
-        ad    = row[idx_adi].strip()    if idx_adi    is not None and len(row) > idx_adi    else ""
-        soyad = row[idx_soyadi].strip() if idx_soyadi is not None and len(row) > idx_soyadi else ""
+    def col(n):
+        try: return headers.index(n)
+        except: return None
+    idx_adi=col("ADI"); idx_soyadi=col("SOYADI"); idx_dob=col("DOĞUM TARİHİ")
+    idx_program=col("EĞİTİM PROGRAMI"); idx_rapor=col("BİTİŞ TARİHİ")
+    idx_sekil=col("EĞİTSEL TANI VE EĞİTİM ÖNERİSİ")
+    students=[]; seen=set()
+    for row in parsed[3:]:
+        if not row: continue
+        sekil = row[idx_sekil].upper() if idx_sekil is not None and len(row)>idx_sekil else ""
+        if "GRUP" not in sekil: continue
+        ad    = row[idx_adi].strip()    if idx_adi    is not None and len(row)>idx_adi    else ""
+        soyad = row[idx_soyadi].strip() if idx_soyadi is not None and len(row)>idx_soyadi else ""
         tam_ad = f"{ad} {soyad}".strip()
-        if not tam_ad or tam_ad in seen:
-            continue
+        if not tam_ad or tam_ad in seen: continue
         seen.add(tam_ad)
-
-        dob = None
-        if idx_dob is not None and len(row) > idx_dob:
-            try:
-                dob = datetime.strptime(row[idx_dob].strip(), "%d.%m.%Y").date().isoformat()
-            except Exception:
-                pass
-
-        rapor_bitis = None
-        if idx_rapor_bitis is not None and len(row) > idx_rapor_bitis:
-            try:
-                rapor_bitis = datetime.strptime(row[idx_rapor_bitis].strip(), "%d.%m.%Y").date().isoformat()
-            except Exception:
-                pass
-
-        prog_str = row[idx_program].strip() if idx_program is not None and len(row) > idx_program else ""
+        dob=None
+        if idx_dob is not None and len(row)>idx_dob:
+            try: dob=datetime.strptime(row[idx_dob].strip(),"%d.%m.%Y").date().isoformat()
+            except: pass
+        rapor=None
+        if idx_rapor is not None and len(row)>idx_rapor:
+            try: rapor=datetime.strptime(row[idx_rapor].strip(),"%d.%m.%Y").date().isoformat()
+            except: pass
+        prog_str = row[idx_program].strip() if idx_program is not None and len(row)>idx_program else ""
         taniler = list(dict.fromkeys(t.strip() for t in prog_str.split(",") if t.strip()))
-
-        students.append({
-            "name": tam_ad,
-            "dob": dob,
-            "rapor_bitis": rapor_bitis,
-            "taniler": taniler,
-            "moduller": modul_from_tani(taniler),
-        })
-
+        students.append({"name":tam_ad,"dob":dob,"rapor_bitis":rapor,
+                         "taniler":taniler,"moduller":modul_from_tani(taniler)})
     return students
 
-
-# ── XLSX Parser ───────────────────────────────────────────────────────────────
-def parse_xlsx(file_bytes: bytes) -> list:
-    ns = {"ns": "http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
-
-    with zipfile.ZipFile(io.BytesIO(file_bytes)) as z:
+def parse_xlsx(fb):
+    ns={"ns":"http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
+    with zipfile.ZipFile(io.BytesIO(fb)) as z:
         with z.open("xl/sharedStrings.xml") as f:
-            ss_tree = ET.parse(f)
-        shared = []
-        for si in ss_tree.findall(".//ns:si", ns):
-            text = "".join(t.text or "" for t in si.findall(".//ns:t", ns))
-            shared.append(text)
-
+            ss=ET.parse(f)
+        shared=["".join(t.text or "" for t in si.findall(".//ns:t",ns))
+                for si in ss.findall(".//ns:si",ns)]
         with z.open("xl/worksheets/sheet1.xml") as f:
-            sheet_tree = ET.parse(f)
-
-    def cell_val(cell):
-        t = cell.get("t", "")
-        v_el = cell.find("ns:v", ns)
-        if v_el is None:
-            return ""
-        val = v_el.text or ""
-        if t == "s":
-            return shared[int(val)]
-        return val
-
-    rows = []
-    for row_el in sheet_tree.findall(".//ns:row", ns):
-        row = {}
-        for cell in row_el.findall("ns:c", ns):
-            ref = cell.get("r", "")
-            col = "".join(c for c in ref if c.isalpha())
-            row[col] = cell_val(cell)
+            sheet=ET.parse(f)
+    def cval(c):
+        v=c.find("ns:v",ns)
+        if v is None: return ""
+        return shared[int(v.text)] if c.get("t")=="s" else (v.text or "")
+    rows=[]
+    for r in sheet.findall(".//ns:row",ns):
+        row={}
+        for c in r.findall("ns:c",ns):
+            col="".join(x for x in c.get("r","") if x.isalpha())
+            row[col]=cval(c)
         rows.append(row)
-
-    seen = set()
-    students = []
-
+    seen=set(); students=[]
     for row in rows[3:]:
-        sekil = row.get("BN", "").strip().upper()
-        if "GRUP" not in sekil:
-            continue
-
-        ad    = row.get("D", "").strip()
-        soyad = row.get("E", "").strip()
-        tam_ad = f"{ad} {soyad}".strip()
-        if not tam_ad or tam_ad in seen:
-            continue
+        if "GRUP" not in row.get("BN","").upper(): continue
+        tam_ad=f"{row.get('D','').strip()} {row.get('E','').strip()}".strip()
+        if not tam_ad or tam_ad in seen: continue
         seen.add(tam_ad)
-
-        dob   = excel_serial_to_date(row.get("J", ""))
-        rapor = excel_serial_to_date(row.get("BK", ""))
-        tani_raw = row.get("BO", "")
-        taniler = list(dict.fromkeys(t.strip() for t in tani_raw.split(",") if t.strip()))
-
-        students.append({
-            "name": tam_ad,
-            "dob": dob,
-            "rapor_bitis": rapor,
-            "taniler": taniler,
-            "moduller": modul_from_tani(taniler),
-        })
-
+        tanilar=list(dict.fromkeys(t.strip() for t in row.get("BO","").split(",") if t.strip()))
+        students.append({"name":tam_ad,"dob":excel_serial(row.get("J","")),"rapor_bitis":excel_serial(row.get("BK","")),
+                         "taniler":tanilar,"moduller":modul_from_tani(tanilar)})
     return students
 
-
-# ── Import UI ─────────────────────────────────────────────────────────────────
 def show_import():
-    """Öğrenciler sekmesinin içine gömülü Lila import bölümü."""
-
-    with st.expander("📥 Lila'dan Öğrenci Listesi İçe Aktar", expanded=st.session_state.get("lila_ac", False)):
-        st.caption("Lila'dan indirdiğiniz **.xls** veya **.xlsx** dosyasını yükleyin. Sadece GRUP eğitimi alan öğrenciler aktarılır.")
-
-        uploaded = st.file_uploader("Dosya seç", type=["xls", "xlsx"], key="lila_upload", label_visibility="collapsed")
-
+    with st.expander("📥 Lila'dan Öğrenci Listesi İçe Aktar", expanded=st.session_state.get("lila_ac",False)):
+        st.caption("**.xls** veya **.xlsx** dosyasını yükleyin — sadece GRUP eğitimi alanlar, sadece grup modülleri aktarılır.")
+        uploaded = st.file_uploader("", type=["xls","xlsx"], key="lila_upload", label_visibility="collapsed")
         if not uploaded:
             return
-
-        with st.spinner("Dosya okunuyor..."):
+        with st.spinner("Okunuyor..."):
             try:
-                file_bytes = uploaded.read()
-                if uploaded.name.endswith(".xlsx"):
-                    students = parse_xlsx(file_bytes)
-                    fmt = "XLSX"
-                else:
-                    students = parse_xls(file_bytes)
-                    fmt = "XLS"
+                fb = uploaded.read()
+                students = parse_xlsx(fb) if uploaded.name.endswith(".xlsx") else parse_xls(fb)
+                fmt = "XLSX" if uploaded.name.endswith(".xlsx") else "XLS"
             except Exception as e:
-                st.error(f"Dosya okunamadı: {e}")
-                return
-
+                st.error(f"Dosya okunamadı: {e}"); return
         if not students:
-            st.warning("Dosyada BİREYSEL+GRUP öğrenci bulunamadı.")
-            return
+            st.warning("GRUP eğitimi alan öğrenci bulunamadı."); return
 
-        # ── Önizleme Tablosu ──────────────────────────────────────────────────
+        # Önizleme — sadece temiz bilgiler
         st.markdown(f"""
-        <div style="background:linear-gradient(135deg,rgba(66,184,177,0.1),rgba(43,82,196,0.08));
-                    border-radius:12px;padding:16px 20px;margin-bottom:16px;
-                    border:1px solid rgba(66,184,177,0.2);">
-          <div style="font-family:Sora,sans-serif;font-weight:700;font-size:16px;color:#1A2B4C;">
+        <div style='background:linear-gradient(135deg,rgba(66,184,177,.12),rgba(43,82,196,.08));
+             border-radius:12px;padding:14px 18px;margin:8px 0 16px;border:1px solid rgba(66,184,177,.25);'>
+          <span style='font-family:Sora,sans-serif;font-weight:700;font-size:15px;color:#1A2B4C;'>
             📋 {len(students)} öğrenci bulundu
-          </div>
-          <div style="font-size:13px;color:#6B7A99;margin-top:4px;">
-            Format: {fmt} &nbsp;·&nbsp; Sadece GRUP eğitimi alanlar listeleniyor
-          </div>
-        </div>
-        """, unsafe_allow_html=True)
+          </span>
+          <span style='font-size:12px;color:#6B7A99;margin-left:12px;'>Format: {fmt}</span>
+        </div>""", unsafe_allow_html=True)
 
-        # Tablo HTML
-        tablo_html = """
-        <style>
-        .lila-tablo { width:100%; border-collapse:collapse; font-size:13px; font-family:'DM Sans',sans-serif; }
-        .lila-tablo thead tr { background:linear-gradient(135deg,#42B8B1,#2B52C4); color:white; }
-        .lila-tablo thead th { padding:10px 12px; text-align:left; font-family:Sora,sans-serif; font-weight:600; }
-        .lila-tablo tbody tr { border-bottom:1px solid rgba(26,43,76,0.07); }
-        .lila-tablo tbody tr:hover { background:rgba(66,184,177,0.06); }
-        .lila-tablo tbody td { padding:9px 12px; color:#1A2B4C; vertical-align:top; }
-        .lila-tablo .tag { display:inline-block; background:rgba(66,184,177,0.15); color:#1A2B4C;
-                           border-radius:4px; padding:2px 8px; margin:2px; font-size:11px; }
-        </style>
-        <table class="lila-tablo">
-          <thead><tr>
-            <th>#</th><th>Ad Soyad</th><th>Doğum</th><th>Rapor Bitiş</th><th>Tanılar</th><th>Grup Modülleri</th>
-          </tr></thead>
-          <tbody>
-        """
-
-        for i, s in enumerate(students, 1):
-            tanilar_html = "".join(f'<span class="tag">{t[:30]}{"…" if len(t)>30 else ""}</span>' for t in s["taniler"]) or "–"
-            moduller_html = "".join(f'<span class="tag">{m}</span>' for m in s["moduller"]) or "–"
-            tablo_html += f"""
-            <tr>
-              <td style="color:#6B7A99">{i}</td>
-              <td><strong>{s['name']}</strong></td>
-              <td>{s['dob'] or '–'}</td>
-              <td>{s['rapor_bitis'] or '–'}</td>
-              <td>{tanilar_html}</td>
-              <td>{moduller_html}</td>
+        # Tablo — sadece ad, doğum, rapor, tanı kısaltması, modüller
+        rows_html = ""
+        for i,s in enumerate(students,1):
+            tani_kisalt = " / ".join(
+                t.replace("Olan Bireyler İçin Destek Eğitim Programı","").strip()
+                for t in s["taniler"]
+            ) or "–"
+            mod_tags = "".join(
+                f'<span style="display:inline-block;background:rgba(66,184,177,.15);color:#1A2B4C;'
+                f'border-radius:4px;padding:1px 7px;margin:2px;font-size:11px;">{m}</span>'
+                for m in s["moduller"]
+            ) or "–"
+            rows_html += f"""<tr>
+              <td style='padding:8px 10px;color:#6B7A99;font-size:12px;'>{i}</td>
+              <td style='padding:8px 10px;font-weight:600;color:#1A2B4C;'>{s['name']}</td>
+              <td style='padding:8px 10px;color:#1A2B4C;font-size:13px;'>{s['dob'] or '–'}</td>
+              <td style='padding:8px 10px;color:#1A2B4C;font-size:13px;'>{s['rapor_bitis'] or '–'}</td>
+              <td style='padding:8px 10px;font-size:12px;color:#1A2B4C;'>{tani_kisalt}</td>
+              <td style='padding:8px 10px;'>{mod_tags}</td>
             </tr>"""
 
-        tablo_html += "</tbody></table>"
-        st.markdown(tablo_html, unsafe_allow_html=True)
+        st.markdown(f"""
+        <div style='overflow-x:auto;'>
+        <table style='width:100%;border-collapse:collapse;font-family:DM Sans,sans-serif;font-size:13px;'>
+          <thead><tr style='background:linear-gradient(135deg,#42B8B1,#2B52C4);'>
+            <th style='padding:10px;color:white;font-family:Sora,sans-serif;text-align:left;'>#</th>
+            <th style='padding:10px;color:white;font-family:Sora,sans-serif;text-align:left;'>Ad Soyad</th>
+            <th style='padding:10px;color:white;font-family:Sora,sans-serif;text-align:left;'>Doğum</th>
+            <th style='padding:10px;color:white;font-family:Sora,sans-serif;text-align:left;'>Rapor Bitiş</th>
+            <th style='padding:10px;color:white;font-family:Sora,sans-serif;text-align:left;'>Tanı</th>
+            <th style='padding:10px;color:white;font-family:Sora,sans-serif;text-align:left;'>Grup Modülleri</th>
+          </tr></thead>
+          <tbody style='background:white;'>{rows_html}</tbody>
+        </table></div>""", unsafe_allow_html=True)
 
-        st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
+        st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
 
-        # Mevcut öğrenciler
-        mevcut_ogrenciler = {s["name"] for s in api.get_students()}
-        yeni_sayisi = len([s for s in students if s["name"] not in mevcut_ogrenciler])
-        guncelle_sayisi = len([s for s in students if s["name"] in mevcut_ogrenciler])
+        mevcut = {s["name"] for s in api.get_students()}
+        yeni = len([s for s in students if s["name"] not in mevcut])
+        guncelle = len([s for s in students if s["name"] in mevcut])
 
-        col_bilgi, col_btn = st.columns([3, 1])
-        with col_bilgi:
-            if yeni_sayisi:
-                st.markdown(f"🟢 **{yeni_sayisi}** yeni öğrenci eklenecek")
-            if guncelle_sayisi:
-                st.markdown(f"🔄 **{guncelle_sayisi}** mevcut öğrenci güncellenecek")
-
+        col_info, col_btn = st.columns([3,1])
+        with col_info:
+            if yeni: st.markdown(f"🟢 **{yeni}** yeni öğrenci eklenecek")
+            if guncelle: st.markdown(f"🔄 **{guncelle}** öğrenci güncellenecek")
         with col_btn:
-            if st.button("🚀 İçe Aktar", type="primary", use_container_width=True, key="lila_import_btn"):
-                _do_import(students, mevcut_ogrenciler)
+            if st.button("🚀 İçe Aktar", type="primary", use_container_width=True, key="lila_btn"):
+                _do_import(students, mevcut)
 
-
-def _do_import(students, mevcut_ogrenciler):
-    """Veritabanına kaydet."""
-    # 1. Eksik tanı ve modülleri ekle
-    mevcut_tanilar  = {d["name"]: d["id"] for d in api.get_diagnoses()}
-    mevcut_moduller = {m["name"]: m["id"] for m in api.get_modules()}
-
-    tum_tanilar  = set(t for s in students for t in s["taniler"])
-    tum_moduller = set(m for s in students for m in s["moduller"])
-
-    for t in tum_tanilar:
+def _do_import(students, mevcut_names):
+    mevcut_tanilar  = {d["name"]:d["id"] for d in api.get_diagnoses()}
+    mevcut_moduller = {m["name"]:m["id"] for m in api.get_modules()}
+    for t in set(t for s in students for t in s["taniler"]):
         if t not in mevcut_tanilar:
-            r = api.create_diagnosis(t)
-            if r:
-                mevcut_tanilar[t] = r["id"]
-
-    for m in tum_moduller:
+            r=api.create_diagnosis(t)
+            if r: mevcut_tanilar[t]=r["id"]
+    for m in set(m for s in students for m in s["moduller"]):
         if m not in mevcut_moduller:
-            r = api.create_module(m)
-            if r:
-                mevcut_moduller[m] = r["id"]
-
-    # 2. Öğrencileri ekle / güncelle
-    eklendi = guncellendi = hatali = 0
-    progress = st.progress(0)
-
-    tum_ogrenciler = api.get_students()
-    ogrenci_id_map = {s["name"]: s["id"] for s in tum_ogrenciler}
-
-    for i, s in enumerate(students):
-        diag_ids = [mevcut_tanilar[t] for t in s["taniler"] if t in mevcut_tanilar]
-        mod_ids  = [mevcut_moduller[m] for m in s["moduller"] if m in mevcut_moduller]
-
+            r=api.create_module(m)
+            if r: mevcut_moduller[m]=r["id"]
+    id_map = {s["name"]:s["id"] for s in api.get_students()}
+    eklendi=guncellendi=hatali=0
+    prog=st.progress(0)
+    for i,s in enumerate(students):
+        diag_ids=[mevcut_tanilar[t] for t in s["taniler"] if t in mevcut_tanilar]
+        mod_ids=[mevcut_moduller[m] for m in s["moduller"] if m in mevcut_moduller]
         try:
-            if s["name"] in mevcut_ogrenciler:
-                sid = ogrenci_id_map.get(s["name"])
-                if sid:
-                    api.update_student(sid, {
-                        "rapor_bitis": s["rapor_bitis"],
-                        "diagnosis_ids": diag_ids,
-                        "module_ids": mod_ids,
-                    })
-                    guncellendi += 1
+            if s["name"] in mevcut_names:
+                if s["name"] in id_map:
+                    api.update_student(id_map[s["name"]],
+                        {"rapor_bitis":s["rapor_bitis"],"diagnosis_ids":diag_ids,"module_ids":mod_ids})
+                    guncellendi+=1
             else:
-                result = api.create_student({
-                    "name": s["name"],
-                    "dob": s["dob"],
-                    "rapor_bitis": s["rapor_bitis"],
-                    "diagnosis_ids": diag_ids,
-                    "module_ids": mod_ids,
-                })
-                if result:
-                    eklendi += 1
-                else:
-                    hatali += 1
-        except Exception:
-            hatali += 1
-
-        progress.progress((i + 1) / len(students))
-
-    progress.empty()
-
+                r=api.create_student({"name":s["name"],"dob":s["dob"],"rapor_bitis":s["rapor_bitis"],
+                                       "diagnosis_ids":diag_ids,"module_ids":mod_ids})
+                if r: eklendi+=1
+                else: hatali+=1
+        except: hatali+=1
+        prog.progress((i+1)/len(students))
+    prog.empty()
     st.markdown(f"""
-    <div style="background:linear-gradient(135deg,rgba(66,184,177,0.15),rgba(43,82,196,0.1));
-                border-radius:12px;padding:16px 20px;border:1px solid rgba(66,184,177,0.3);">
-      <div style="font-family:Sora,sans-serif;font-weight:700;font-size:15px;color:#1A2B4C;margin-bottom:8px;">
+    <div style='background:linear-gradient(135deg,rgba(66,184,177,.15),rgba(43,82,196,.1));
+         border-radius:12px;padding:16px 20px;border:1px solid rgba(66,184,177,.3);'>
+      <div style='font-family:Sora,sans-serif;font-weight:700;font-size:15px;color:#1A2B4C;margin-bottom:6px;'>
         ✅ İçe Aktarma Tamamlandı
       </div>
-      <div style="font-size:14px;color:#1A2B4C;">
-        🟢 <strong>{eklendi}</strong> yeni öğrenci eklendi &nbsp;·&nbsp;
-        🔄 <strong>{guncellendi}</strong> öğrenci güncellendi &nbsp;·&nbsp;
-        ❌ <strong>{hatali}</strong> hata
+      <div style='font-size:14px;color:#1A2B4C;'>
+        🟢 <b>{eklendi}</b> yeni &nbsp;·&nbsp; 🔄 <b>{guncellendi}</b> güncellendi &nbsp;·&nbsp; ❌ <b>{hatali}</b> hata
       </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    st.session_state["lila_ac"] = False
+    </div>""", unsafe_allow_html=True)
+    st.session_state["lila_ac"]=False
     st.rerun()
