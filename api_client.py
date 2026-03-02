@@ -87,7 +87,30 @@ def delete_saved_group(gid):
 
 # ── Admin ─────────────────────────────────────────────────────────────────────
 def admin_get_kurumlar():
-    return _handle(requests.get(f"{API_URL}/api/admin/kurumlar", headers=_headers())) or []
+    candidates = [
+        f"{API_URL}/api/admin/kurumlar",
+        f"{API_URL}/api/admin/kurumlar/",
+        f"{API_URL}/api/admin/institutions",
+    ]
+
+    for url in candidates:
+        resp = requests.get(url, headers=_headers())
+        if resp.status_code == 404:
+            continue
+        data = _handle(resp)
+        if data is None:
+            return []
+        if isinstance(data, list):
+            return data
+        if isinstance(data, dict):
+            for key in ("items", "results", "data", "kurumlar", "institutions"):
+                if isinstance(data.get(key), list):
+                    return data.get(key)
+        st.error("Kurum listesi yanıt formatı beklenenden farklı.")
+        return []
+
+    st.error("Kurum listesi endpoint'i bulunamadı.")
+    return []
 
 def admin_onayla(kurum_id):
     return _handle(requests.post(f"{API_URL}/api/admin/kurumlar/{kurum_id}/onayla", headers=_headers()))
