@@ -1,9 +1,6 @@
 """
-Grup Oluştur — Harf oyunu mantığı:
-1. Bir öğrenci seç
-2. O öğrencinin modülleriyle uyumlu, max 3 yaş farkı olan öğrenciler otomatik listelenir
-3. Birden fazla grup arkadaşı seçilebilir
-4. Uyumluluk anlık kontrol edilir
+Grup Oluştur — eski projedeki harf oyunu mantığı.
+Numara rozetleri + mod badge'ler. Minimal kart tasarımı.
 """
 import streamlit as st
 from datetime import date
@@ -11,216 +8,180 @@ import api_client as api
 
 
 def yas(dob_str):
-    if not dob_str:
-        return None
+    if not dob_str: return None
+    try: return (date.today() - date.fromisoformat(dob_str)).days / 365.25
+    except: return None
+
+def rapor_renk(r):
+    if not r: return "#22C55E"
     try:
-        d = date.fromisoformat(dob_str)
-        return (date.today() - d).days / 365.25
-    except:
-        return None
+        k=(date.fromisoformat(r)-date.today()).days
+        return "#EF4444" if k<0 else "#F59E0B" if k<=30 else "#22C55E"
+    except: return "#22C55E"
+
+def rapor_etiket(r):
+    if not r: return ""
+    try:
+        k=(date.fromisoformat(r)-date.today()).days
+        if k<0:   return " (rapor bitti)"
+        if k<=30: return f" ({k} gün)"
+        return ""
+    except: return ""
 
 
 def show():
-    st.header("🔎 Grup Oluştur")
+    st.markdown("""
+    <style>
+    .oyuncu-kart{background:white;border:1.5px solid rgba(66,184,177,.35);border-radius:12px;
+      padding:10px 14px;margin-bottom:7px;display:flex;align-items:center;gap:10px;}
+    .oyuncu-numara{background:linear-gradient(135deg,#42B8B1,#2B52C4);color:white;border-radius:50%;
+      min-width:28px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;
+      font-family:Sora,sans-serif;font-weight:700;font-size:13px;flex-shrink:0;}
+    .oyuncu-ad{font-family:Sora,sans-serif;font-weight:600;font-size:14px;color:#1A2B4C;line-height:1.3;}
+    .oyuncu-sub{font-size:11px;color:#6B7A99;margin-top:2px;}
+    .mod-badge{display:inline-block;background:rgba(66,184,177,.12);color:#2B7A76;border-radius:20px;
+      padding:1px 9px;font-size:11px;font-weight:500;margin:2px 3px;border:1px solid rgba(66,184,177,.2);}
+    .grup-ozet{background:linear-gradient(135deg,rgba(66,184,177,.08),rgba(43,82,196,.05));
+      border:1.5px solid rgba(66,184,177,.28);border-radius:14px;padding:16px 20px;margin:12px 0;}
+    </style>""", unsafe_allow_html=True)
 
     students = api.get_students()
     if not students:
-        st.info("Önce Lila'dan öğrenci aktarın veya manuel ekleyin.")
+        st.info("Önce Lila'dan öğrenci aktarın.")
         return
 
-    # Öğrenci adı → obje map
-    s_map = {s["name"]: s for s in students}
+    mods_by_id  = {s["id"]: [m["name"] for m in s.get("modules",[])]   for s in students}
+    diags_by_id = {s["id"]: [d["name"] for d in s.get("diagnoses",[])] for s in students}
 
-    # ── ADIM 1: Ana öğrenci seç ───────────────────────────────────────────────
-    st.markdown("""
-    <div style='background:white;border-radius:14px;padding:20px 24px;
-         border:1px solid rgba(26,43,76,.08);box-shadow:0 2px 8px rgba(26,43,76,.05);margin-bottom:16px;'>
-      <div style='font-family:Sora,sans-serif;font-weight:700;font-size:15px;color:#1A2B4C;margin-bottom:4px;'>
-        1️⃣ Ana öğrenciyi seç
-      </div>
-      <div style='font-size:13px;color:#6B7A99;'>Grup için merkez öğrenci — modülleri baz alınacak</div>
-    </div>""", unsafe_allow_html=True)
+    if "grup_uyeleri" not in st.session_state:
+        st.session_state["grup_uyeleri"] = []
+    grup = st.session_state["grup_uyeleri"]
+    secilen_ids = {u["id"] for u in grup}
 
-    ana_adi = st.selectbox(
-        "Öğrenci",
-        options=["— Seç —"] + sorted(s_map.keys()),
-        key="grup_ana",
-        label_visibility="collapsed",
-    )
+    # Başlık + sıfırla
+    bc1, bc2 = st.columns([6,1])
+    with bc1: st.header("🔎 Grup Oluştur")
+    with bc2:
+        st.markdown("<div style='height:14px'></div>", unsafe_allow_html=True)
+        if st.button("🧹 Sıfırla", use_container_width=True):
+            st.session_state["grup_uyeleri"] = []
+            st.rerun()
 
-    if ana_adi == "— Seç —":
-        return
+    # ── Seçili üyeler ─────────────────────────────────────────────────────────
+    for i, u in enumerate(grup):
+        mod_badges = "".join(f'<span class="mod-badge">{m}</span>' for m in u["mod_adlari"])
+        renk  = rapor_renk(u.get("rapor_bitis"))
+        etiket= rapor_etiket(u.get("rapor_bitis"))
+        yas_str = f"{yas(u.get('dob')):.0f} yaş" if yas(u.get('dob')) else ""
+        sub_parts = [p for p in [yas_str, etiket.strip()] if p]
+        sub_html  = " · ".join(sub_parts)
 
-    ana = s_map[ana_adi]
-    ana_mods = {m["name"] for m in ana.get("modules", [])}
-    ana_yas  = yas(ana.get("dob"))
-
-    # Ana öğrenci bilgi kartı
-    tanilar = ", ".join(d["name"].replace("Olan Bireyler İçin Destek Eğitim Programı","").strip()
-                        for d in ana.get("diagnoses", [])) or "–"
-    mods_str = ", ".join(sorted(ana_mods)) or "–"
-
-    col_k1, col_k2, col_k3 = st.columns(3)
-    col_k1.markdown(f"**Doğum**  \n{ana.get('dob') or '–'}")
-    col_k2.markdown(f"**Yaş**  \n{f'{ana_yas:.1f}' if ana_yas else '–'}")
-    col_k3.markdown(f"**Rapor bitiş**  \n{ana.get('rapor_bitis') or '–'}")
-    st.markdown(f"**Tanı:** {tanilar}")
-    st.markdown(f"**Modüller:** {mods_str}")
-
-    if not ana_mods:
-        st.warning("Bu öğrenciye modül atanmamış. Lütfen önce Lila'dan import yapın.")
-        return
-
-    # ── ADIM 2: Uyumlu öğrenciler ────────────────────────────────────────────
-    st.markdown("""
-    <div style='background:white;border-radius:14px;padding:20px 24px;
-         border:1px solid rgba(26,43,76,.08);box-shadow:0 2px 8px rgba(26,43,76,.05);
-         margin:16px 0;'>
-      <div style='font-family:Sora,sans-serif;font-weight:700;font-size:15px;color:#1A2B4C;margin-bottom:4px;'>
-        2️⃣ Grup arkadaşı seç
-      </div>
-      <div style='font-size:13px;color:#6B7A99;'>Max 3 yaş farkı · Ortak modül zorunlu · Birden fazla seçilebilir</div>
-    </div>""", unsafe_allow_html=True)
-
-    uyumlu = []
-    uyumsuz = []
-    for s in students:
-        if s["name"] == ana_adi:
-            continue
-        s_mods = {m["name"] for m in s.get("modules", [])}
-        ortak  = ana_mods & s_mods
-        s_yas  = yas(s.get("dob"))
-        yas_fark = abs(ana_yas - s_yas) if (ana_yas and s_yas) else None
-
-        if ortak and (yas_fark is None or yas_fark <= 3):
-            uyumlu.append({
-                "s": s,
-                "ortak": ortak,
-                "yas_fark": yas_fark,
-            })
-        else:
-            uyumsuz.append({"s": s, "ortak": ortak, "yas_fark": yas_fark})
-
-    if not uyumlu:
-        st.warning("Bu öğrenci için uyumlu grup arkadaşı bulunamadı.")
-        return
-
-    uyumlu.sort(key=lambda x: (-len(x["ortak"]), x["yas_fark"] or 0))
-
-    # Seçim listesi — her satırda uyumluluk bilgisi
-    secenekler = []
-    secenek_bilgi = {}
-    for u in uyumlu:
-        s   = u["s"]
-        yf  = f"{u['yas_fark']:.1f} yaş farkı" if u["yas_fark"] is not None else "yaş bilinmiyor"
-        ortak_str = ", ".join(sorted(u["ortak"]))
-        etiket = f"{s['name']}  ·  {yf}  ·  Ortak: {ortak_str}"
-        secenekler.append(etiket)
-        secenek_bilgi[etiket] = {"s": s, "ortak": u["ortak"]}
-
-    secili_etiketler = st.multiselect(
-        "Grup arkadaşları",
-        options=secenekler,
-        key="grup_arkadaslar",
-        label_visibility="collapsed",
-    )
-
-    # ── Uyumluluk Kartı ──────────────────────────────────────────────────────
-    if secili_etiketler:
-        secili_students = [ana] + [secenek_bilgi[e]["s"] for e in secili_etiketler]
-
-        # Ortak modüller
-        ortak_mods = ana_mods.copy()
-        for e in secili_etiketler:
-            ortak_mods &= secenek_bilgi[e]["ortak"]
-
-        # Yaş kontrolü
-        yaslar = [yas(s.get("dob")) for s in secili_students]
-        yaslar = [y for y in yaslar if y is not None]
-        max_fark = max(yaslar) - min(yaslar) if len(yaslar) >= 2 else 0
-
-        yas_ok  = max_fark <= 3
-        mod_ok  = len(ortak_mods) > 0
-        kisi_ok = len(secili_students) >= 2
-
-        renk_yas = "#22c55e" if yas_ok else "#ef4444"
-        renk_mod = "#22c55e" if mod_ok else "#ef4444"
-        renk_kisi = "#22c55e" if kisi_ok else "#ef4444"
-
-        st.markdown(f"""
-        <div style='background:white;border-radius:14px;padding:20px 24px;
-             border:1px solid rgba(26,43,76,.08);box-shadow:0 2px 8px rgba(26,43,76,.05);margin-top:16px;'>
-          <div style='font-family:Sora,sans-serif;font-weight:700;font-size:15px;color:#1A2B4C;margin-bottom:14px;'>
-            👥 Grup Önizleme
-          </div>
-          <div style='display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px;'>
-            <div style='background:rgba(0,0,0,.04);border-radius:8px;padding:8px 14px;font-size:13px;'>
-              <span style='color:{renk_kisi};font-weight:700;'>{len(secili_students)}</span>
-              <span style='color:#6B7A99;'> kişi</span>
-            </div>
-            <div style='background:rgba(0,0,0,.04);border-radius:8px;padding:8px 14px;font-size:13px;'>
-              <span style='color:{renk_yas};font-weight:700;'>{max_fark:.1f} yıl</span>
-              <span style='color:#6B7A99;'> max yaş farkı</span>
-            </div>
-            <div style='background:rgba(0,0,0,.04);border-radius:8px;padding:8px 14px;font-size:13px;'>
-              <span style='color:{renk_mod};font-weight:700;'>{len(ortak_mods)}</span>
-              <span style='color:#6B7A99;'> ortak modül</span>
-            </div>
-          </div>
-        """, unsafe_allow_html=True)
-
-        if ortak_mods:
-            tags = "".join(
-                f'<span style="display:inline-block;background:rgba(66,184,177,.15);color:#1A2B4C;'
-                f'border-radius:5px;padding:3px 10px;margin:3px;font-size:12px;">{m}</span>'
-                for m in sorted(ortak_mods)
-            )
-            st.markdown(f"<div style='margin-bottom:8px;'><b>Ortak modüller:</b><br>{tags}</div>", unsafe_allow_html=True)
-
-        st.markdown("</div>", unsafe_allow_html=True)
-
-        uyumsuzluk = []
-        if not yas_ok:  uyumsuzluk.append(f"⚠️ Yaş farkı {max_fark:.1f} yıl (max 3 yıl)")
-        if not mod_ok:  uyumsuzluk.append("⚠️ Ortak modül yok")
-        if not kisi_ok: uyumsuzluk.append("⚠️ En az 2 kişi gerekli")
-
-        if uyumsuzluk:
-            for u in uyumsuzluk:
-                st.error(u)
-        else:
-            st.divider()
-
-            # ── Kaydet ───────────────────────────────────────────────────────
-            st.markdown("**3️⃣ Grubu kaydet**")
-            c1, c2 = st.columns(2)
-            with c1:
-                saat = st.text_input("Saat (opsiyonel)", placeholder="10:00", key="grup_saat")
-            with c2:
-                liste = st.text_input("Liste adı (opsiyonel)", placeholder="Salı Grubu", key="grup_liste")
-            notlar = st.text_area("Notlar (opsiyonel)", key="grup_notlar", height=80)
-
-            if st.button("💾 Grubu Kaydet", type="primary", use_container_width=True):
-                payload = {
-                    "ogrenciler": " | ".join(s["name"] for s in secili_students),
-                    "moduller":   " / ".join(sorted(ortak_mods)),
-                    "saat":       saat.strip() or None,
-                    "notlar":     notlar.strip() or None,
-                    "liste_adi":  liste.strip() or "",
-                }
-                if api.create_saved_group(payload):
-                    st.success("✅ Grup kaydedildi!")
-                    st.balloons()
-                    for k in ["grup_ana","grup_arkadaslar","grup_saat","grup_liste","grup_notlar"]:
-                        st.session_state.pop(k, None)
+        kc, kx = st.columns([11,1])
+        with kc:
+            st.markdown(f"""
+            <div class="oyuncu-kart">
+              <div class="oyuncu-numara">{i+1}</div>
+              <div style="flex:1;min-width:0;">
+                <div class="oyuncu-ad">
+                  <span style="display:inline-block;width:7px;height:7px;border-radius:50%;
+                    background:{renk};margin-right:5px;vertical-align:middle;flex-shrink:0;"></span>
+                  {u['name']}
+                </div>
+                <div class="oyuncu-sub">{sub_html}</div>
+                <div style="margin-top:4px;">{mod_badges}</div>
+              </div>
+            </div>""", unsafe_allow_html=True)
+        with kx:
+            if i == len(grup)-1:
+                st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+                if st.button("✕", key=f"cikart_{i}"):
+                    st.session_state["grup_uyeleri"].pop()
                     st.rerun()
 
-    # Uyumsuz öğrenciler (collapsible)
-    if uyumsuz:
-        with st.expander(f"🚫 Uyumsuz öğrenciler ({len(uyumsuz)}) — neden?"):
-            for u in uyumsuz:
-                s   = u["s"]
-                yf  = f"{u['yas_fark']:.1f} yıl fark" if u["yas_fark"] is not None else "yaş bilinmiyor"
-                neden = []
-                if not u["ortak"]: neden.append("ortak modül yok")
-                if u["yas_fark"] and u["yas_fark"] > 3: neden.append(f"yaş farkı fazla ({yf})")
-                st.markdown(f"- **{s['name']}** — {', '.join(neden)}")
+    # ── Sonraki seçim ─────────────────────────────────────────────────────────
+    if len(grup) < 10:
+        baslik = "👤 İlk öğrenciyi seçin" if not grup else f"➕ {len(grup)+1}. üyeyi seçin"
+        if grup: st.caption(baslik + " · ortak modüllü, max 3 yaş farkı")
+        else:     st.caption(baslik)
+
+        if not grup:
+            adaylar = [s for s in students if s["id"] not in secilen_ids]
+        else:
+            mod_setleri = [set(u["mod_adlari"]) for u in grup]
+            ortak = set.intersection(*mod_setleri)
+            doblar=[u["dob"] for u in grup if u.get("dob")]
+            yas_min=min(yas(d) for d in doblar) if doblar else 0
+            yas_max=max(yas(d) for d in doblar) if doblar else 100
+            adaylar=[]
+            for s in students:
+                if s["id"] in secilen_ids: continue
+                if not (set(mods_by_id.get(s["id"],[])) & ortak): continue
+                sy=yas(s.get("dob"))
+                if sy is not None and (sy < yas_min-3 or sy > yas_max+3): continue
+                adaylar.append(s)
+
+        if not adaylar and grup:
+            st.info("Uyumlu öğrenci bulunamadı.")
+        elif adaylar:
+            aday_liste=["— Seç —"]
+            aday_map={}
+            for s in sorted(adaylar, key=lambda x:x["name"]):
+                sy=yas(s.get("dob")); re_str=rapor_etiket(s.get("rapor_bitis"))
+                et=s["name"]
+                if sy: et+=f"  ·  {sy:.0f} yaş"
+                if re_str: et+=re_str
+                aday_liste.append(et); aday_map[et]=s
+            sec=st.selectbox("", aday_liste, key=f"aday_{len(grup)}", label_visibility="collapsed")
+            if sec!="— Seç —":
+                s=aday_map[sec]
+                st.session_state["grup_uyeleri"].append({
+                    "id":s["id"],"name":s["name"],
+                    "dob":s.get("dob"),"rapor_bitis":s.get("rapor_bitis"),
+                    "mod_adlari":mods_by_id.get(s["id"],[]),
+                    "diag_adlari":diags_by_id.get(s["id"],[]),
+                })
+                st.rerun()
+
+    # ── Özet ve kaydet ────────────────────────────────────────────────────────
+    if len(grup) >= 2:
+        st.divider()
+        ortak_mod = set.intersection(*[set(u["mod_adlari"]) for u in grup])
+        doblar=[u["dob"] for u in grup if u.get("dob")]
+        yas_farki=None
+        if len(doblar)==len(grup):
+            yaslar=[yas(d) for d in doblar]
+            yas_farki=round(max(yaslar)-min(yaslar),1)
+
+        uyarilar=[]
+        if not ortak_mod: uyarilar.append("⚠️ Ortak modül yok — gruplanamaz.")
+        if yas_farki and yas_farki>3: uyarilar.append(f"⚠️ Yaş farkı {yas_farki} yıl — 3 yılı aşıyor.")
+
+        if uyarilar:
+            for u in uyarilar: st.warning(u)
+        else:
+            mod_badges="".join(f'<span class="mod-badge">{m}</span>' for m in sorted(ortak_mod))
+            isimler=" · ".join(u["name"] for u in grup)
+            yas_str=f"{yas_farki} yıl fark" if yas_farki else "—"
+            st.markdown(f"""
+            <div class="grup-ozet">
+              <div style="font-family:Sora,sans-serif;font-weight:700;font-size:14px;color:#1A2B4C;margin-bottom:6px;">
+                ✅ Grup oluşturulabilir
+              </div>
+              <div style="font-size:13px;color:#1A2B4C;font-weight:500;margin-bottom:8px;">{isimler}</div>
+              <div style="margin-bottom:6px;"><span style="font-size:11px;color:#6B7A99;">Ortak modüller:</span><br>{mod_badges}</div>
+              <div style="font-size:12px;color:#6B7A99;">🎂 {yas_str} &nbsp;·&nbsp; 👥 {len(grup)} kişi</div>
+            </div>""", unsafe_allow_html=True)
+
+            nc, nkay = st.columns([3,1])
+            with nc:
+                not_val=st.text_input("Not (isteğe bağlı)", placeholder="Grup notu...", key="grup_not")
+            with nkay:
+                st.markdown("<div style='height:28px'></div>", unsafe_allow_html=True)
+                if st.button("⭐ Kaydet", type="primary", use_container_width=True, key="grup_kaydet"):
+                    if api.create_saved_group({
+                        "ogrenciler":" | ".join(u["name"] for u in grup),
+                        "moduller":" / ".join(sorted(ortak_mod)),
+                        "saat":None,"notlar":not_val or "","liste_adi":""}):
+                        st.success("✅ Kaydedildi!")
+                        st.session_state["grup_uyeleri"]=[]
+                        st.rerun()

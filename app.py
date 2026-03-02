@@ -349,20 +349,20 @@ from pages import yonetim, ogrenciler, grup_ara, kaydedilen_gruplar, admin
 
 is_admin = st.session_state.get("kurum_email", "") == "necmettinakgun@gmail.com"
 
-tab_labels = ["⭐ Gruplar", "👤 Öğrenci", "🔎 Grup Oluştur", "⚙️ Yönetim"]
+tab_labels = ["⚙️ Yönetim", "👤 Öğrenci", "🔎 Grup Oluştur", "⭐ Gruplar"]
 if is_admin:
     tab_labels.append("🛡️ Admin")
 
 tabs = st.tabs(tab_labels)
 
 with tabs[0]:
-    kaydedilen_gruplar.show()
+    yonetim.show()
 with tabs[1]:
     ogrenciler.show()
 with tabs[2]:
     grup_ara.show()
 with tabs[3]:
-    yonetim.show()
+    kaydedilen_gruplar.show()
 if is_admin and len(tabs) > 4:
     with tabs[4]:
         admin.show()
