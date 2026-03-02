@@ -37,14 +37,29 @@ def show():
         st.info("Kurum bulunamadı.")
         return
 
-    aktif   = [k for k in kurumlar if k.get("aktif")]
-    bekleyen = [k for k in kurumlar if not k.get("aktif")]
+    def onaylandi_mi(kurum):
+        if "onaylandi" in kurum:
+            return bool(kurum.get("onaylandi"))
+        if "onayli" in kurum:
+            return bool(kurum.get("onayli"))
+        if "approved" in kurum:
+            return bool(kurum.get("approved"))
+        # Eski backend'lerde sadece aktif alanı bulunabiliyor.
+        return bool(kurum.get("aktif"))
 
-    m1, m2, m3 = st.columns(3)
+    def aktif_mi(kurum):
+        return bool(kurum.get("aktif", True))
+
+    bekleyen = [k for k in kurumlar if not onaylandi_mi(k)]
+    aktif = [k for k in kurumlar if onaylandi_mi(k) and aktif_mi(k)]
+    pasif = [k for k in kurumlar if onaylandi_mi(k) and not aktif_mi(k)]
+
+    m1, m2, m3, m4 = st.columns(4)
     m1.metric("Toplam Kurum", len(kurumlar))
     m2.metric("Aktif", len(aktif))
     m3.metric("Onay Bekleyen", len(bekleyen), delta=f"+{len(bekleyen)}" if bekleyen else None,
               delta_color="inverse" if bekleyen else "off")
+    m4.metric("Pasif", len(pasif))
 
     st.divider()
 
@@ -64,10 +79,14 @@ def show():
                 c1.markdown(f"**E-posta**  \n{k['email']}")
                 c2.markdown(f"**Kayıt**  \n{k.get('created_at','')[:10]}")
                 c3.markdown(f"**Öğrenci**  \n{k.get('ogrenci_sayisi', 0)}")
-                if st.button("✅ Onayla", key=f"onayla_{k['id']}", type="primary"):
+                b1, b2 = st.columns(2)
+                if b1.button("✅ Onayla", key=f"onayla_{k['id']}", type="primary", use_container_width=True):
                     if api.admin_onayla(k["id"]):
                         st.success("Onaylandı!")
                         st.rerun()
+                if b2.button("✉️ Resend", key=f"resend_{k['id']}", use_container_width=True):
+                    if api.admin_resend_onay_mail(k["id"]):
+                        st.success("Resend talebi gönderildi.")
 
     # ── Aktif Kurumlar ────────────────────────────────────────────────────────
     st.markdown("""
@@ -88,3 +107,16 @@ def show():
                 if api.admin_pasif(k["id"]):
                     st.warning("Pasif yapıldı.")
                     st.rerun()
+
+    if pasif:
+        st.markdown("""
+        <div style='font-family:Sora,sans-serif;font-weight:700;font-size:15px;
+             color:#1A2B4C;margin:16px 0 8px;'>🚫 Pasif Kurumlar</div>""",
+        unsafe_allow_html=True)
+
+        for k in pasif:
+            with st.expander(f"🚫 {k['ad']}  ·  {k['email']}"):
+                c1, c2, c3 = st.columns(3)
+                c1.markdown(f"**E-posta**  \n{k['email']}")
+                c2.markdown(f"**Kayıt**  \n{k.get('created_at','')[:10]}")
+                c3.markdown(f"**Öğrenci**  \n{k.get('ogrenci_sayisi', 0)}")
