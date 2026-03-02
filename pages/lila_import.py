@@ -273,4 +273,5 @@ def _do_import(students, mevcut_names):
       </span>
     </div>""", unsafe_allow_html=True)
     st.session_state["lila_ac"]=False
+    st.session_state["students_cache_bust"] = st.session_state.get("students_cache_bust",0)+1
     st.rerun()

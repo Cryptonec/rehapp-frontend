@@ -1,6 +1,6 @@
 """
 Yönetim — sadece mevcut tanı/modülleri göster + otomatik seed.
-Manuel ekleme yok.
+Manuel ekleme yok. Sayılar başlıkta yok.
 """
 import streamlit as st
 import api_client as api
@@ -28,21 +28,26 @@ ALL_TANILAR  = sorted(TANI_MODUL_MAP.keys())
 ALL_MODULLER = sorted({m for v in TANI_MODUL_MAP.values() for m in v})
 
 
+@st.cache_data(ttl=30, show_spinner=False)
+def _get_diags_mods():
+    return api.get_diagnoses(), api.get_modules()
+
+
 def show():
     st.header("⚙️ Yönetim")
 
-    mevcut_t = {d["name"] for d in api.get_diagnoses()}
-    mevcut_m = {m["name"] for m in api.get_modules()}
+    diags, mods = _get_diags_mods()
+    mevcut_t = {d["name"] for d in diags}
+    mevcut_m = {m["name"] for m in mods}
     eksik_t  = [t for t in ALL_TANILAR  if t not in mevcut_t]
     eksik_m  = [m for m in ALL_MODULLER if m not in mevcut_m]
 
     if eksik_t or eksik_m:
         st.warning(f"⚠️ {len(eksik_t)} tanı ve {len(eksik_m)} modül henüz sisteme eklenmemiş.")
         if st.button("🚀 Tüm Tanı ve Modülleri Otomatik Ekle", type="primary"):
-            for t in eksik_t:
-                api.create_diagnosis(t)
-            for m in eksik_m:
-                api.create_module(m)
+            for t in eksik_t: api.create_diagnosis(t)
+            for m in eksik_m: api.create_module(m)
+            _get_diags_mods.clear()
             st.success("✅ Tamamlandı!")
             st.rerun()
     else:
@@ -50,34 +55,38 @@ def show():
 
     st.divider()
     st.subheader("📋 Grup Eğitimi Tanı → Modül Haritası")
-    st.caption("Bu eşleştirme Lila import ve grup oluşturma işlemlerinde kullanılır. Değiştirilemez.")
+    st.caption("Bu eşleştirme Lila import ve grup oluşturma işlemlerinde kullanılır.")
 
-    for tani, modller in TANI_MODUL_MAP.items():
+    for tani, modul_listesi in TANI_MODUL_MAP.items():
         kisa = tani.replace(" Olan Bireyler İçin Destek Eğitim Programı", "")
         with st.expander(f"🔵 {kisa}"):
-            for m in modller:
+            for m in modul_listesi:
                 st.markdown(f"&nbsp;&nbsp;&nbsp;✅ {m}")
 
     st.divider()
 
-    # Sadece görüntüleme — sistemdeki tanı ve modüller
+    # Sistemdeki tanı ve modüller — sadece görüntüleme, silme mümkün
     col1, col2 = st.columns(2)
-    diags = api.get_diagnoses()
-    mods  = api.get_modules()
 
     with col1:
-        st.subheader(f"Tanılar ({len(diags)})")
+        st.subheader("Tanılar")
         for d in diags:
-            kisa = d["name"].replace(" Olan Bireyler İçin Destek Eğitim Programı","").strip()
-            c1, c2 = st.columns([5,1])
-            c1.markdown(f"<div style='padding:5px 0;font-size:13px;color:#1A2B4C'>{kisa}</div>", unsafe_allow_html=True)
+            kisa = d["name"].replace(" Olan Bireyler İçin Destek Eğitim Programı", "").strip()
+            c1, c2 = st.columns([5, 1])
+            c1.markdown(f"<div style='padding:5px 0;font-size:13px;color:#1A2B4C'>{kisa}</div>",
+                        unsafe_allow_html=True)
             if c2.button("🗑", key=f"del_d_{d['id']}"):
-                if api.delete_diagnosis(d["id"]): st.rerun()
+                if api.delete_diagnosis(d["id"]):
+                    _get_diags_mods.clear()
+                    st.rerun()
 
     with col2:
-        st.subheader(f"Modüller ({len(mods)})")
+        st.subheader("Modüller")
         for m in mods:
-            c1, c2 = st.columns([5,1])
-            c1.markdown(f"<div style='padding:5px 0;font-size:13px;color:#1A2B4C'>{m['name']}</div>", unsafe_allow_html=True)
+            c1, c2 = st.columns([5, 1])
+            c1.markdown(f"<div style='padding:5px 0;font-size:13px;color:#1A2B4C'>{m['name']}</div>",
+                        unsafe_allow_html=True)
             if c2.button("🗑", key=f"del_m_{m['id']}"):
-                if api.delete_module(m["id"]): st.rerun()
+                if api.delete_module(m["id"]):
+                    _get_diags_mods.clear()
+                    st.rerun()
