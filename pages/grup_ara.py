@@ -52,13 +52,15 @@ def _normalize_module_names(raw_name):
         return []
 
     if "<" in txt and "mod-badge" in txt:
-        badges = re.findall(r'<span\\s+class=["\']mod-badge["\']>(.*?)</span>', txt, flags=re.IGNORECASE)
+        badges = re.findall(r'<span\s+class=["\']mod-badge["\']>(.*?)</span>', txt, flags=re.IGNORECASE)
         if badges:
             return [unescape(b).strip() for b in badges if unescape(b).strip()]
 
-    cleaned = re.sub(r"<[^>]+>", "", txt)
-    cleaned = unescape(cleaned).strip()
-    return [cleaned] if cleaned else []
+    protected = re.sub(r"</(span|div|p|li|br)\s*>", "\n", txt, flags=re.IGNORECASE)
+    protected = re.sub(r"<(div|p|li|br)\b[^>]*>", "\n", protected, flags=re.IGNORECASE)
+    cleaned = re.sub(r"<[^>]+>", "", protected)
+    cleaned = unescape(cleaned)
+    return [part.strip() for part in re.split(r"[\n\r]+", cleaned) if part.strip()]
 
 
 # ── Veri yükleme — session_state cache ───────────────────────────────────────
@@ -73,14 +75,15 @@ def _load():
         raw = api.get_students()
 
         # Her öğrenci için frozenset — kesişim O(1)
-        mods_by_id = {
-            s["id"]: frozenset(
-                mod_name
-                for m in s.get("modules", [])
-                for mod_name in _normalize_module_names(m.get("name"))
-            )
-            for s in raw
-        }
+        mods_by_id = {}
+        for s in raw:
+            normalized_names = []
+            for m in s.get("modules", []):
+                mod_names = _normalize_module_names(m.get("name"))
+                if not isinstance(mod_names, list):
+                    continue
+                normalized_names.extend(mod_names)
+            mods_by_id[s["id"]] = frozenset(normalized_names)
         diags_by_id = {s["id"]: frozenset(d["name"] for d in s.get("diagnoses", [])) for s in raw}
 
         # Hızlı isim→id haritası
