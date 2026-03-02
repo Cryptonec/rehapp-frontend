@@ -28,6 +28,29 @@ if params.get("p") == "login" and not st.session_state.get("token"):
 # LANDING PAGE — saf HTML, Streamlit widget YOK
 # ══════════════════════════════════════════════════════════════════════════════
 def landing_sayfasi():
+    # Streamlit native butonu — CSS ile sağ üste sabitlenir
+    # Bu landing'de tek Streamlit widget'ı — st.stop() öncesinde render edilmeli
+    st.markdown("""
+    <style>
+    div[data-testid="stVerticalBlock"] > div:first-child .stButton {
+        position:fixed !important; top:12px !important; right:20px !important;
+        z-index:99999 !important; width:auto !important;
+    }
+    div[data-testid="stVerticalBlock"] > div:first-child .stButton > button {
+        background:linear-gradient(135deg,#38C9C0,#2756D6) !important;
+        color:#ffffff !important; -webkit-text-fill-color:#ffffff !important;
+        font-family:Sora,sans-serif !important; font-weight:700 !important;
+        font-size:14px !important; border-radius:50px !important; border:none !important;
+        padding:10px 22px !important; white-space:nowrap !important;
+        box-shadow:0 4px 16px rgba(56,201,192,.4) !important;
+        height:auto !important; min-height:0 !important;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    if st.button("Giriş Yap / Kayıt Ol →"):
+        st.session_state["page"] = "login"
+        st.rerun()
+
     st.markdown("""<!DOCTYPE html>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&display=swap');
@@ -52,11 +75,12 @@ nav{position:fixed;top:0;left:0;right:0;z-index:1000;padding:0 6%;
 .nav-logo span{color:var(--teal);}
 .nav-dots{display:flex;gap:5px;align-items:center;margin-right:4px;}
 .nav-dot{width:7px;height:7px;border-radius:50%;}
-.nav-cta{background:linear-gradient(135deg,var(--teal),var(--blue));color:white;font-family:Sora,sans-serif;font-size:13px;font-weight:600;
-  padding:10px 22px;border-radius:50px;text-decoration:none;border:none;cursor:pointer;
+.nav-cta{background:linear-gradient(135deg,var(--teal),var(--blue));color:#ffffff !important;font-family:Sora,sans-serif;font-size:13px;font-weight:700;
+  padding:10px 22px;border-radius:50px;text-decoration:none !important;border:none;cursor:pointer;
   transition:all .25s;display:inline-flex;align-items:center;gap:6px;letter-spacing:.2px;
-  box-shadow:0 4px 14px rgba(56,201,192,.3);}
-.nav-cta:hover{transform:translateY(-1px);box-shadow:0 8px 20px rgba(56,201,192,.45);}
+  box-shadow:0 4px 14px rgba(56,201,192,.35);-webkit-text-fill-color:#ffffff !important;}
+.nav-cta:hover{transform:translateY(-1px);box-shadow:0 8px 20px rgba(56,201,192,.5);color:#ffffff !important;}
+.nav-cta:visited{color:#ffffff !important;}
 .nav-cta svg{width:14px;height:14px;}
 
 /* HERO */
@@ -103,19 +127,20 @@ nav{position:fixed;top:0;left:0;right:0;z-index:1000;padding:0 6%;
   line-height:1.75;max-width:540px;margin:0 auto 40px;}
 
 .hero-cta-group{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
-.btn-primary{background:linear-gradient(135deg,var(--teal),var(--blue));color:white;
-  font-family:Sora,sans-serif;font-size:15px;font-weight:600;padding:14px 32px;
-  border-radius:50px;border:none;cursor:pointer;text-decoration:none;
-  display:inline-flex;align-items:center;gap:8px;
+.btn-primary{background:linear-gradient(135deg,var(--teal),var(--blue));color:#ffffff !important;
+  font-family:Sora,sans-serif;font-size:15px;font-weight:700;padding:14px 32px;
+  border-radius:50px;border:none;cursor:pointer;text-decoration:none !important;
+  display:inline-flex;align-items:center;gap:8px;-webkit-text-fill-color:#ffffff !important;
   box-shadow:0 8px 24px rgba(56,201,192,.35);transition:all .25s;letter-spacing:.2px;}
+.btn-primary:visited{color:#ffffff !important;}
 .btn-primary:hover{transform:translateY(-2px);box-shadow:0 12px 32px rgba(56,201,192,.45);}
 .btn-primary svg{width:16px;height:16px;transition:transform .2s;}
 .btn-primary:hover svg{transform:translateX(3px);}
-.btn-secondary{background:rgba(255,255,255,.12);color:white;font-family:Sora,sans-serif;
-  font-size:15px;font-weight:500;padding:14px 28px;border-radius:50px;
-  border:1.5px solid rgba(255,255,255,.3);cursor:pointer;text-decoration:none;
-  transition:all .25s;backdrop-filter:blur(8px);}
-.btn-secondary:hover{background:rgba(255,255,255,.2);border-color:rgba(255,255,255,.5);color:white;}
+.btn-secondary{background:transparent;color:var(--navy);font-family:Sora,sans-serif;
+  font-size:15px;font-weight:600;padding:14px 28px;border-radius:50px;
+  border:2px solid rgba(13,27,53,.2);cursor:pointer;text-decoration:none;
+  transition:all .25s;display:inline-flex;align-items:center;gap:8px;}
+.btn-secondary:hover{background:var(--navy);color:white;border-color:var(--navy);}
 
 /* STATS */
 .hero-stats{display:flex;gap:40px;justify-content:center;margin-top:56px;flex-wrap:wrap;}
