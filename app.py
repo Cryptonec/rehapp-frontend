@@ -635,29 +635,39 @@ hr{border-color:rgba(13,27,53,.08)!important;margin:16px 0!important;}
 </style>""", unsafe_allow_html=True)
 
 # ── Topbar ────────────────────────────────────────────────────────────────────
-st.markdown(f"""
-<div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0 8px;">
-  <div style="display:flex;align-items:center;gap:10px;">
-    <div>
-      <div style="display:flex;gap:5px;margin-bottom:2px;">
-        <div style="width:8px;height:8px;border-radius:50%;background:#2756D6;"></div>
-        <div style="width:8px;height:8px;border-radius:50%;background:#38C9C0;"></div>
-        <div style="width:8px;height:8px;border-radius:50%;background:#F5883A;"></div>
-      </div>
-      <div style="font-family:Sora,sans-serif;font-size:19px;font-weight:800;letter-spacing:-.7px;line-height:1;">
-        <span style="color:#0D1B35;">Reh</span><span style="color:#38C9C0;">app</span>
-      </div>
+st.markdown('''
+<style>
+@keyframes rh-in{from{opacity:0;transform:scale(0) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
+@keyframes rh-bounce{0%,100%{transform:translateY(0)}40%{transform:translateY(-10px)}65%{transform:translateY(-4px)}}
+.rh-d1{background:#2756D6;animation:rh-in .35s cubic-bezier(.34,1.56,.64,1) .05s both,rh-bounce .65s ease-in-out .8s 3}
+.rh-d2{background:#38C9C0;animation:rh-in .35s cubic-bezier(.34,1.56,.64,1) .18s both,rh-bounce .65s ease-in-out .95s 3}
+.rh-d3{background:#F5883A;animation:rh-in .35s cubic-bezier(.34,1.56,.64,1) .31s both,rh-bounce .65s ease-in-out 1.1s 3}
+</style>
+<div style="padding:8px 0 0 0;display:flex;align-items:center;justify-content:flex-start;">
+  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;">
+    <div style="display:flex;gap:10px;align-items:center;justify-content:center;margin-bottom:4px;">
+      <div class="rh-d1" style="width:14px;height:14px;border-radius:50%;"></div>
+      <div class="rh-d2" style="width:14px;height:14px;border-radius:50%;"></div>
+      <div class="rh-d3" style="width:14px;height:14px;border-radius:50%;"></div>
     </div>
-    <div style="width:1px;height:28px;background:rgba(13,27,53,.1);"></div>
-    <div style="font-size:13px;color:#6B7A99;font-weight:500;">🏢 {st.session_state.get('kurum_ad','')}</div>
+    <div style="font-family:Sora,sans-serif;font-size:32px;font-weight:800;line-height:1;letter-spacing:-1px;">
+      <span style="color:#1A2B4C">Reh</span><span style="color:#38C9C0">app</span>
+    </div>
   </div>
-</div>""", unsafe_allow_html=True)
+</div>
+''', unsafe_allow_html=True)
 
-col_space, col_logout = st.columns([10, 1])
+col_title, col_logout = st.columns([6, 1])
 with col_logout:
-    if st.button("🚪", help="Çıkış Yap", use_container_width=True):
+    if st.button("🚪 Çıkış", use_container_width=True):
         st.session_state.clear()
         st.rerun()
+with col_title:
+    st.markdown(
+        f"<div style='font-family:DM Sans,sans-serif;font-size:16px;font-weight:500;"
+        f"color:#1A2B4C;margin-bottom:-6px;'>🏢 {st.session_state.get('kurum_ad','')}</div>",
+        unsafe_allow_html=True,
+    )
 
 # ── Sekmeler ──────────────────────────────────────────────────────────────────
 from pages import yonetim, ogrenciler, grup_ara, kaydedilen_gruplar, admin
