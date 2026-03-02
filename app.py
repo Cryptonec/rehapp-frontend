@@ -228,7 +228,7 @@ st.markdown("""
 html,body,[class*="css"]{font-family:'DM Sans',sans-serif!important;font-size:16px!important;}
 p,li,label,.stMarkdown,.stText{font-size:15px!important;line-height:1.6!important;}
 .stApp{background:#F4F7FB!important;}
-.block-container{padding:.75rem 1.5rem 4rem!important;max-width:1100px!important;}
+.block-container{padding:.25rem 1.5rem 4rem!important;max-width:1100px!important;}
 h1,h2,h3{font-family:'Sora',sans-serif!important;color:#1A2B4C!important;letter-spacing:-.5px!important;}
 h1{font-size:1.8rem!important;font-weight:700!important;}
 h2{font-size:1.4rem!important;}
@@ -308,41 +308,47 @@ document.addEventListener('touchstart',function(e){
 },{passive:false});
 </script>""", unsafe_allow_html=True)
 
-# ── Logo + Üst Bar ────────────────────────────────────────────────────────────
-st.markdown("""
+# ── Logo + Üst Bar (kompakt, tek satır) ─────────────────────────────────────
+st.markdown(f"""
 <style>
-@keyframes rh-in{from{opacity:0;transform:scale(0) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
-@keyframes rh-bounce{0%,100%{transform:translateY(0)}40%{transform:translateY(-10px)}65%{transform:translateY(-4px)}}
-.rh-d1{background:#2B52C4;animation:rh-in .35s cubic-bezier(.34,1.56,.64,1) .05s both,rh-bounce .65s ease-in-out .8s 3}
-.rh-d2{background:#42B8B1;animation:rh-in .35s cubic-bezier(.34,1.56,.64,1) .18s both,rh-bounce .65s ease-in-out .95s 3}
-.rh-d3{background:#F39237;animation:rh-in .35s cubic-bezier(.34,1.56,.64,1) .31s both,rh-bounce .65s ease-in-out 1.1s 3}
+@keyframes rh-in{{from{{opacity:0;transform:scale(0) translateY(8px)}}to{{opacity:1;transform:scale(1) translateY(0)}}}}
+@keyframes rh-bounce{{0%,100%{{transform:translateY(0)}}40%{{transform:translateY(-8px)}}65%{{transform:translateY(-3px)}}}}
+.rh-d1{{background:#2B52C4;animation:rh-in .3s cubic-bezier(.34,1.56,.64,1) .05s both,rh-bounce .6s ease-in-out .7s 3}}
+.rh-d2{{background:#42B8B1;animation:rh-in .3s cubic-bezier(.34,1.56,.64,1) .15s both,rh-bounce .6s ease-in-out .85s 3}}
+.rh-d3{{background:#F39237;animation:rh-in .3s cubic-bezier(.34,1.56,.64,1) .25s both,rh-bounce .6s ease-in-out 1.0s 3}}
 </style>
-<div style="padding:8px 0 4px;display:flex;align-items:center;">
-  <div style="display:flex;flex-direction:column;align-items:center;">
-    <div style="display:flex;gap:8px;align-items:center;margin-bottom:3px;">
-      <div class="rh-d1" style="width:12px;height:12px;border-radius:50%;"></div>
-      <div class="rh-d2" style="width:12px;height:12px;border-radius:50%;"></div>
-      <div class="rh-d3" style="width:12px;height:12px;border-radius:50%;"></div>
+<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0 6px;">
+  <!-- Logo + kurum -->
+  <div style="display:flex;align-items:center;gap:10px;">
+    <div style="display:flex;flex-direction:column;align-items:center;">
+      <div style="display:flex;gap:5px;align-items:center;margin-bottom:2px;">
+        <div class="rh-d1" style="width:9px;height:9px;border-radius:50%;"></div>
+        <div class="rh-d2" style="width:9px;height:9px;border-radius:50%;"></div>
+        <div class="rh-d3" style="width:9px;height:9px;border-radius:50%;"></div>
+      </div>
+      <div style="font-family:Sora,sans-serif;font-size:20px;font-weight:800;line-height:1;letter-spacing:-.8px;">
+        <span style="color:#1A2B4C">Reh</span><span style="color:#42B8B1">app</span>
+      </div>
     </div>
-    <div style="font-family:Sora,sans-serif;font-size:26px;font-weight:800;line-height:1;letter-spacing:-1px;">
-      <span style="color:#1A2B4C">Reh</span><span style="color:#42B8B1">app</span>
+    <div style="width:1px;height:30px;background:rgba(26,43,76,.1);margin:0 2px;"></div>
+    <div style="font-family:DM Sans,sans-serif;font-size:13px;font-weight:500;color:#6B7A99;">
+      🏢 {st.session_state.get('kurum_ad','')}
     </div>
   </div>
 </div>""", unsafe_allow_html=True)
 
-col_title, col_logout = st.columns([6, 1])
-with col_title:
-    st.markdown(
-        f"<div style='font-family:DM Sans,sans-serif;font-size:14px;font-weight:500;"
-        f"color:#6B7A99;margin-bottom:-4px;'>🏢 {st.session_state.get('kurum_ad','')}</div>",
-        unsafe_allow_html=True)
-with col_logout:
-    if st.button("🚪 Çıkış", use_container_width=True):
+# Çıkış butonu — sağ üste fixed
+st.markdown("""
+<style>
+.rh-cikis-btn{position:fixed!important;top:10px!important;right:16px!important;z-index:9999!important;}
+</style>""", unsafe_allow_html=True)
+
+col_cikis = st.columns([10, 1])[1]
+with col_cikis:
+    if st.button("🚪", help="Çıkış Yap", use_container_width=True):
         for k in list(st.session_state.keys()):
             st.session_state.pop(k, None)
         st.rerun()
-
-st.divider()
 
 # ── Sekmeler ──────────────────────────────────────────────────────────────────
 from pages import yonetim, ogrenciler, grup_ara, kaydedilen_gruplar, admin
