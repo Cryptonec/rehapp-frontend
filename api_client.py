@@ -97,6 +97,14 @@ def _admin_resource_paths():
     ]
 
 
+def _admin_list_paths(resource):
+    return [
+        f"{API_URL}/api/admin/{resource}",
+        f"{API_URL}/api/admin/{resource}/",
+        f"{API_URL}/api/admin/{resource}/list",
+    ]
+
+
 def _parse_kurum_list(data):
     if isinstance(data, list):
         return data
@@ -110,8 +118,7 @@ def _parse_kurum_list(data):
 
 def admin_get_kurumlar():
     for resource in _admin_resource_paths():
-        for suffix in ("", "/"):
-            url = f"{API_URL}/api/admin/{resource}{suffix}"
+        for url in _admin_list_paths(resource):
             resp = requests.get(url, headers=_headers())
             if resp.status_code == 404:
                 continue
@@ -131,18 +138,28 @@ def admin_get_kurumlar():
     return []
 
 
+def _admin_action_urls(resource, kurum_id, action_suffix):
+    return [
+        f"{API_URL}/api/admin/{resource}/{kurum_id}/{action_suffix}",
+        f"{API_URL}/api/admin/{resource}/{action_suffix}/{kurum_id}",
+        f"{API_URL}/api/admin/{action_suffix}/{resource}/{kurum_id}",
+    ]
+
+
 def _admin_action_post(kurum_id, action_suffixes):
     last_error = None
     for resource in _admin_resource_paths():
         for action_suffix in action_suffixes:
-            url = f"{API_URL}/api/admin/{resource}/{kurum_id}/{action_suffix}"
-            resp = requests.post(url, headers=_headers())
-            if resp.status_code == 404:
-                continue
-            if 200 <= resp.status_code < 300:
-                return resp.json() if resp.content else {"ok": True}
-            last_error = resp
-            break
+            for url in _admin_action_urls(resource, kurum_id, action_suffix):
+                resp = requests.post(url, headers=_headers())
+                if resp.status_code == 404:
+                    continue
+                if 200 <= resp.status_code < 300:
+                    return resp.json() if resp.content else {"ok": True}
+                last_error = resp
+                break
+            if last_error is not None:
+                break
         if last_error is not None:
             break
 
