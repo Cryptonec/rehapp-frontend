@@ -10,6 +10,8 @@ Performans optimizasyonları:
 """
 import streamlit as st
 from datetime import date
+from html import unescape
+import re
 import api_client as api
 
 
@@ -40,6 +42,25 @@ def turkish_sort_key(s):
     return s.lower().translate(str.maketrans("çğıöşüÇĞİÖŞÜ", "cgiosucgiosu"))
 
 
+def _normalize_module_names(raw_name):
+    """Bozuk/HTML enjekte edilmiş modül isimlerini temizleyip liste döndürür."""
+    if not raw_name:
+        return []
+
+    txt = str(raw_name).strip()
+    if not txt:
+        return []
+
+    if "<" in txt and "mod-badge" in txt:
+        badges = re.findall(r'<span\\s+class=["\']mod-badge["\']>(.*?)</span>', txt, flags=re.IGNORECASE)
+        if badges:
+            return [unescape(b).strip() for b in badges if unescape(b).strip()]
+
+    cleaned = re.sub(r"<[^>]+>", "", txt)
+    cleaned = unescape(cleaned).strip()
+    return [cleaned] if cleaned else []
+
+
 # ── Veri yükleme — session_state cache ───────────────────────────────────────
 
 def _load():
@@ -52,7 +73,14 @@ def _load():
         raw = api.get_students()
 
         # Her öğrenci için frozenset — kesişim O(1)
-        mods_by_id  = {s["id"]: frozenset(m["name"] for m in s.get("modules",   [])) for s in raw}
+        mods_by_id = {
+            s["id"]: frozenset(
+                mod_name
+                for m in s.get("modules", [])
+                for mod_name in _normalize_module_names(m.get("name"))
+            )
+            for s in raw
+        }
         diags_by_id = {s["id"]: frozenset(d["name"] for d in s.get("diagnoses", [])) for s in raw}
 
         # Hızlı isim→id haritası
