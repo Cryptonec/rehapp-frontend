@@ -384,14 +384,13 @@ with col_logout:
 st.divider()
 
 # ── Sekmeler ──────────────────────────────────────────────────────────────────
-from pages import yonetim, ogrenciler, grup_ara, kaydedilen_gruplar, lila_import  # noqa: E402
+from pages import yonetim, ogrenciler, grup_ara, kaydedilen_gruplar  # noqa: E402
 
-tab1, tab2, tab3, tab4, tab5 = st.tabs([
+tab1, tab2, tab3, tab4 = st.tabs([
     "⚙️ Yönetim",
     "👤 Öğrenci",
     "🔎 Grup Oluştur",
     "⭐ Kaydedilen Gruplar",
-    "📥 Lila Import",
 ])
 
 with tab1:
@@ -402,5 +401,3 @@ with tab3:
     grup_ara.show()
 with tab4:
     kaydedilen_gruplar.show()
-with tab5:
-    lila_import.show()
