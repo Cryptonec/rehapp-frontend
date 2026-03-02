@@ -249,7 +249,7 @@ div[data-testid="collapsedControl"]{display:none!important;}
     </div>
     <div class="nav-logo">Reh<span>app</span></div>
   </div>
-  <a class="nav-cta" href="?p=login">
+  <a class="nav-cta" href="?p=login" target="_self">
     Giriş Yap / Kayıt Ol
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
       <path d="M5 12h14M12 5l7 7-7 7"/>
@@ -288,7 +288,7 @@ div[data-testid="collapsedControl"]{display:none!important;}
       Uyumlu grupları otomatik bul, zamanını öğrencilere ayır.
     </p>
     <div class="hero-cta-group fade-5">
-      <a class="btn-primary" href="?p=login">
+      <a class="btn-primary" href="?p=login" target="_self">
         Ücretsiz Başla
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
           <path d="M5 12h14M12 5l7 7-7 7"/>
@@ -429,7 +429,7 @@ div[data-testid="collapsedControl"]{display:none!important;}
     <span>Hemen başlayın.</span>
   </h2>
   <p class="cta-sub">Kurumunuzu sisteme ekleyin, onaydan sonra tüm özelliklere erişin.</p>
-  <a class="btn-primary" href="?p=login" style="font-size:16px;padding:16px 40px;display:inline-flex;">
+  <a class="btn-primary" href="?p=login" target="_self" style="font-size:16px;padding:16px 40px;display:inline-flex;">
     Ücretsiz Kaydol
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="18" height="18">
       <path d="M5 12h14M12 5l7 7-7 7"/>
