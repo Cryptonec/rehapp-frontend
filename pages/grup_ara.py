@@ -1,13 +1,21 @@
 import streamlit as st
 import api_client as api
+import re
+from html import unescape
+
+
+def _clean_text(value: str) -> str:
+    """API'den yanlışlıkla gelen HTML parçalarını temizler."""
+    text = unescape(value or "")
+    return re.sub(r"<[^>]+>", "", text).strip()
 
 
 def show():
     st.header("🔍 Öğrenciye Göre Ara & Grup Oluştur")
 
     students = api.get_students()
-    mods     = api.get_modules()
-    mod_names = [m["name"] for m in mods]
+    mods = api.get_modules()
+    mod_names = [_clean_text(m["name"]) for m in mods if _clean_text(m.get("name", ""))]
 
     if not students:
         st.info("Önce öğrenci ekleyin.")
@@ -33,7 +41,10 @@ def show():
     if sec_mod:
         filtered = [
             s for s in filtered
-            if all(any(m["name"] == mod for m in s.get("modules", [])) for mod in sec_mod)
+            if all(
+                any(_clean_text(m.get("name", "")) == mod for m in s.get("modules", []))
+                for mod in sec_mod
+            )
         ]
     if sec_diag:
         filtered = [
@@ -66,9 +77,17 @@ def show():
     selected_students = [s for s in filtered if s["name"] in selected_names]
     common_mods: set[str] = set()
     if selected_students:
-        common_mods = set(m["name"] for m in selected_students[0].get("modules", []))
+        common_mods = set(
+            _clean_text(m.get("name", ""))
+            for m in selected_students[0].get("modules", [])
+            if _clean_text(m.get("name", ""))
+        )
         for s in selected_students[1:]:
-            common_mods &= set(m["name"] for m in s.get("modules", []))
+            common_mods &= {
+                _clean_text(m.get("name", ""))
+                for m in s.get("modules", [])
+                if _clean_text(m.get("name", ""))
+            }
 
     st.write("**Ortak modüller:**", ", ".join(sorted(common_mods)) if common_mods else "–")
 
