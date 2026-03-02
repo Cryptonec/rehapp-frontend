@@ -8,7 +8,7 @@ import api_client as api
 
 st.set_page_config(
     page_title="Rehapp",
-    page_icon="🔵",
+    page_icon="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+CiAgPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTYiIGZpbGw9IiMwRDFCMzUiLz4KICA8Y2lyY2xlIGN4PSIxNiIgY3k9IjMyIiByPSIxMCIgZmlsbD0iIzI3NTZENiIvPgogIDxjaXJjbGUgY3g9IjMyIiBjeT0iMzIiIHI9IjEwIiBmaWxsPSIjMzhDOUMwIi8+CiAgPGNpcmNsZSBjeD0iNDgiIGN5PSIzMiIgcj0iMTAiIGZpbGw9IiNGNTg4M0EiLz4KPC9zdmc+",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
@@ -81,6 +81,11 @@ nav{position:fixed;top:0;left:0;right:0;z-index:1000;padding:0 6%;
 .hero-badge-dot{width:6px;height:6px;border-radius:50%;background:var(--teal);
   animation:pulse-dot 2s ease-in-out infinite;}
 @keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(1.3)}}
+@keyframes dot-drop{from{opacity:0;transform:scale(0) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
+@keyframes dot-bounce{0%,100%{transform:translateY(0)}40%{transform:translateY(-12px)}65%{transform:translateY(-5px)}}
+.d1{animation:dot-drop .35s cubic-bezier(.34,1.56,.64,1) .05s both, dot-bounce .7s ease-in-out 1s 3;}
+.d2{animation:dot-drop .35s cubic-bezier(.34,1.56,.64,1) .18s both, dot-bounce .7s ease-in-out 1.15s 3;}
+.d3{animation:dot-drop .35s cubic-bezier(.34,1.56,.64,1) .31s both, dot-bounce .7s ease-in-out 1.3s 3;}
 
 .hero-title{font-family:Sora,sans-serif;font-size:clamp(36px,6vw,72px);font-weight:800;
   line-height:1.08;letter-spacing:-2.5px;color:var(--navy);margin-bottom:24px;}
@@ -195,6 +200,18 @@ footer{background:#07101F;padding:40px 6%;
 .fade-3{animation:fadeUp .7s ease .4s both;}
 .fade-4{animation:fadeUp .7s ease .55s both;}
 .fade-5{animation:fadeUp .7s ease .7s both;}
+
+/* HIDE ALL STREAMLIT CHROME */
+#MainMenu{display:none!important;visibility:hidden!important;}
+header[data-testid="stHeader"]{display:none!important;visibility:hidden!important;}
+[data-testid="stToolbar"]{display:none!important;}
+[data-testid="stSidebar"]{display:none!important;}
+footer{display:none!important;}
+.stApp > header{display:none!important;}
+button[kind="header"]{display:none!important;}
+section[data-testid="stSidebar"]{display:none!important;}
+div[data-testid="collapsedControl"]{display:none!important;}
+.reportview-container .main .block-container{padding-top:0!important;}
 </style>
 
 <nav>
@@ -206,12 +223,12 @@ footer{background:#07101F;padding:40px 6%;
     </div>
     <div class="nav-logo">Reh<span>app</span></div>
   </div>
-  <button class="nav-cta" onclick="window.location.href='?p=login'">
-    Giriş Yap
+  <a class="nav-cta" href="?p=login">
+    Giriş Yap / Kayıt Ol
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
       <path d="M5 12h14M12 5l7 7-7 7"/>
     </svg>
-  </button>
+  </a>
 </nav>
 
 <section class="hero">
@@ -221,31 +238,41 @@ footer{background:#07101F;padding:40px 6%;
     <div class="hero-blob2"></div>
   </div>
   <div class="hero-inner">
-    <div class="hero-badge fade-1">
+    <div class="hero-logo-mark fade-1" style="display:flex;flex-direction:column;align-items:center;margin-bottom:28px;">
+      <div style="display:flex;gap:10px;justify-content:center;margin-bottom:8px;">
+        <div class="logo-dot d1" style="width:14px;height:14px;border-radius:50%;background:#2756D6;"></div>
+        <div class="logo-dot d2" style="width:14px;height:14px;border-radius:50%;background:#38C9C0;"></div>
+        <div class="logo-dot d3" style="width:14px;height:14px;border-radius:50%;background:#F5883A;"></div>
+      </div>
+      <div style="font-family:Sora,sans-serif;font-size:clamp(28px,4vw,40px);font-weight:800;letter-spacing:-1.5px;line-height:1;">
+        <span style="color:#0D1B35;">Reh</span><span style="color:#38C9C0;">app</span>
+      </div>
+    </div>
+    <div class="hero-badge fade-2" style="margin-bottom:20px;">
       <div class="hero-badge-dot"></div>
       Özel Eğitim ve Rehabilitasyon Merkezleri İçin
     </div>
-    <h1 class="hero-title fade-2">
+    <h1 class="hero-title fade-3">
       Grup planlamasını<br>
       <span class="accent">zekaya</span> bırak
       <span class="line2">Saniyeler içinde, sıfır hata.</span>
     </h1>
-    <p class="hero-sub fade-3">
+    <p class="hero-sub fade-4">
       Öğrenci tanıları, RAM raporları ve modüller — hepsi tek platformda. 
       Uyumlu grupları otomatik bul, zamanını öğrencilere ayır.
     </p>
-    <div class="hero-cta-group fade-4">
-      <button class="btn-primary" onclick="window.location.href='?p=login'">
+    <div class="hero-cta-group fade-5">
+      <a class="btn-primary" href="?p=login">
         Ücretsiz Başla
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
           <path d="M5 12h14M12 5l7 7-7 7"/>
         </svg>
-      </button>
+      </a>
       <button class="btn-secondary" onclick="document.getElementById('features').scrollIntoView({behavior:'smooth'})">
         Nasıl Çalışır?
       </button>
     </div>
-    <div class="hero-stats fade-5">
+    <div class="hero-stats" style="animation:fadeUp .7s ease .85s both">
       <div class="stat">
         <div class="stat-n">7<span>+</span></div>
         <div class="stat-l">Tanı Programı</div>
@@ -376,12 +403,12 @@ footer{background:#07101F;padding:40px 6%;
     <span>Hemen başlayın.</span>
   </h2>
   <p class="cta-sub">Kurumunuzu sisteme ekleyin, onaydan sonra tüm özelliklere erişin.</p>
-  <button class="btn-primary" style="font-size:16px;padding:16px 40px;" onclick="window.location.href='?p=login'">
+  <a class="btn-primary" href="?p=login" style="font-size:16px;padding:16px 40px;display:inline-flex;">
     Ücretsiz Kaydol
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="18" height="18">
       <path d="M5 12h14M12 5l7 7-7 7"/>
     </svg>
-  </button>
+  </a>
 </section>
 
 <footer>
@@ -404,9 +431,12 @@ def login_sayfasi():
     @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500&display=swap');
     html,body,[class*="css"]{font-family:'Plus Jakarta Sans',sans-serif!important;}
     .stApp{background:linear-gradient(145deg,#EBF2FF 0%,#E8F6F5 50%,#F0F4FA 100%)!important;min-height:100vh;}
-    #MainMenu,footer,header{visibility:hidden!important;}
+    #MainMenu,footer,header{visibility:hidden!important;display:none!important;}
     [data-testid="stToolbar"]{display:none!important;}
     [data-testid="stSidebar"]{display:none!important;}
+    [data-testid="stHeader"]{display:none!important;}
+    div[data-testid="collapsedControl"]{display:none!important;}
+    button[kind="header"]{display:none!important;}
     .block-container{max-width:420px!important;padding:0 1.25rem!important;margin:0 auto!important;}
 
     [data-baseweb="input"]>div{border-radius:12px!important;border:1.5px solid rgba(13,27,53,.12)!important;
@@ -546,9 +576,12 @@ h1,h2,h3{font-family:'Sora',sans-serif!important;color:#0D1B35!important;letter-
 h1{font-size:1.7rem!important;font-weight:700!important;}
 h2{font-size:1.3rem!important;}
 h3{font-size:1.1rem!important;}
-#MainMenu,footer,header{visibility:hidden!important;}
+#MainMenu,footer,header{visibility:hidden!important;display:none!important;}
 [data-testid="stToolbar"]{display:none!important;}
 [data-testid="stSidebar"]{display:none!important;}
+[data-testid="stHeader"]{display:none!important;}
+div[data-testid="collapsedControl"]{display:none!important;}
+button[kind="header"]{display:none!important;}
 
 [data-baseweb="tab-list"]{background:white!important;border-radius:14px!important;padding:5px!important;
   border:1px solid rgba(13,27,53,.08)!important;box-shadow:0 2px 8px rgba(13,27,53,.05)!important;
