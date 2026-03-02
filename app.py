@@ -50,12 +50,13 @@ nav{position:fixed;top:0;left:0;right:0;z-index:1000;padding:0 6%;
   border-bottom:1px solid rgba(13,27,53,.07);}
 .nav-logo{font-family:Sora,sans-serif;font-size:22px;font-weight:800;letter-spacing:-.8px;color:var(--navy);}
 .nav-logo span{color:var(--teal);}
-.nav-dots{display:flex;gap:5px;align-items:center;margin-right:8px;}
+.nav-dots{display:flex;gap:5px;align-items:center;margin-right:4px;}
 .nav-dot{width:7px;height:7px;border-radius:50%;}
-.nav-cta{background:var(--navy);color:white;font-family:Sora,sans-serif;font-size:13px;font-weight:600;
+.nav-cta{background:linear-gradient(135deg,var(--teal),var(--blue));color:white;font-family:Sora,sans-serif;font-size:13px;font-weight:600;
   padding:10px 22px;border-radius:50px;text-decoration:none;border:none;cursor:pointer;
-  transition:all .2s;display:inline-flex;align-items:center;gap:6px;letter-spacing:.2px;}
-.nav-cta:hover{background:var(--blue);transform:translateY(-1px);box-shadow:0 8px 20px rgba(39,86,214,.3);}
+  transition:all .25s;display:inline-flex;align-items:center;gap:6px;letter-spacing:.2px;
+  box-shadow:0 4px 14px rgba(56,201,192,.3);}
+.nav-cta:hover{transform:translateY(-1px);box-shadow:0 8px 20px rgba(56,201,192,.45);}
 .nav-cta svg{width:14px;height:14px;}
 
 /* HERO */
@@ -215,8 +216,8 @@ div[data-testid="collapsedControl"]{display:none!important;}
 </style>
 
 <nav>
-  <div style="display:flex;align-items:center;gap:10px;">
-    <div class="nav-dots">
+  <div style="display:flex;align-items:center;gap:0px;flex-direction:column;justify-content:center;">
+    <div class="nav-dots" style="margin-bottom:2px;">
       <div class="nav-dot" style="background:#2756D6;"></div>
       <div class="nav-dot" style="background:#38C9C0;"></div>
       <div class="nav-dot" style="background:#F5883A;"></div>
@@ -268,7 +269,7 @@ div[data-testid="collapsedControl"]{display:none!important;}
           <path d="M5 12h14M12 5l7 7-7 7"/>
         </svg>
       </a>
-      <button class="btn-secondary" onclick="document.getElementById('features').scrollIntoView({behavior:'smooth'})">
+      <button class="btn-secondary" onclick="document.getElementById('how').scrollIntoView({behavior:'smooth'})">
         Nasıl Çalışır?
       </button>
     </div>
