@@ -277,8 +277,8 @@ def show():
             uyarilar.append("⚠️ Ortak tanı yok — bu öğrenciler birlikte gruplanamaz.")
         if not ortak_modul:
             uyarilar.append("⚠️ Ortak modül yok — bu öğrenciler birlikte gruplanamaz.")
-        if yas_farki is not None and yas_farki > 3:
-            uyarilar.append(f"⚠️ Yaş farkı {yas_farki} yıl — 3 yılı aşıyor.")
+        if yas_farki is not None and yas_farki > 4:
+            uyarilar.append(f"⚠️ Yaş farkı {yas_farki} yıl — 4 yılı aşıyor.")
 
         if uyarilar:
             for u in uyarilar:
