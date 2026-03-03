@@ -158,28 +158,22 @@ def show():
 
         col_kart, col_x = st.columns([10, 1])
         with col_kart:
-            st.markdown(f"""
-            <div class="oyuncu-kart">
-              <div class="oyuncu-numara">{i+1}</div>
-              <div style="flex:1">
-                <div class="oyuncu-ad">
-                  <span style="display:inline-block;width:8px;height:8px;border-radius:50%;
-                    background:{renk};margin-right:7px;vertical-align:middle;"></span>
-                  {uye["name"]}
-                  <span style="font-size:12px;font-weight:400;color:{renk};margin-left:4px;">
-                    {etiket_str}
-                  </span>
-                </div>
-                <div style="margin-top:4px;">{mod_badges}</div>
-              </div>
-            </div>""", unsafe_allow_html=True)
-        with col_x:
-            if is_last:
-                st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
-                if st.button("✕", key=f"srch_sil_{i}", help="Bu üyeyi çıkar"):
-                    st.session_state["srch_grup_uyeleri"].pop()
-                    st.rerun()
-
+            html = (
+                '<div class="oyuncu-kart">'
+                '<div class="oyuncu-numara">' + str(i+1) + '</div>'
+                '<div style="flex:1">'
+                '<div class="oyuncu-ad">'
+                '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;'
+                'background:' + renk + ';margin-right:7px;vertical-align:middle;"></span>'
+                + uye["name"] +
+                '<span style="font-size:12px;font-weight:400;color:' + renk + ';margin-left:4px;">'
+                + etiket_str + '</span>'
+                '</div>'
+                '<div style="margin-top:4px;">' + mod_badges + '</div>'
+                '</div>'
+                '</div>'
+            )
+            st.markdown(html, unsafe_allow_html=True)
     # ── Sonraki aday hesaplama ────────────────────────────────────────────────
     if len(grup) < 10:
         etiket_lbl = "İlk öğrenciyi seçin" if not grup else f"{len(grup)+1}. üyeyi seçin"
