@@ -468,13 +468,14 @@ def login_sayfasi():
     [data-testid="stFormSubmitButton"]>button:hover{transform:translateY(-1px)!important;
       box-shadow:0 12px 28px rgba(56,201,192,.45)!important;}
 
-    [data-testid="stRadio"]>div{background:rgba(13,27,53,.06)!important;border-radius:12px!important;padding:4px!important;}
-    [data-testid="stRadio"] label{border-radius:10px!important;font-family:'Sora',sans-serif!important;
-      font-size:14px!important;font-weight:600!important;padding:9px 20px!important;
-      flex:1!important;text-align:center!important;transition:all .2s!important;}
+    [data-testid="stRadio"]>div{background:rgba(13,27,53,.06)!important;border-radius:50px!important;padding:5px!important;display:flex!important;}
+    [data-testid="stRadio"] label{border-radius:50px!important;font-family:'Sora',sans-serif!important;
+      font-size:15px!important;font-weight:600!important;padding:11px 0!important;
+      flex:1!important;text-align:center!important;transition:all .25s!important;color:#6B7A99!important;}
     [data-testid="stRadio"] label:has(input:checked){
       background:linear-gradient(135deg,#38C9C0,#2756D6)!important;color:white!important;
-      box-shadow:0 4px 12px rgba(56,201,192,.3)!important;}
+      -webkit-text-fill-color:white!important;
+      box-shadow:0 6px 16px rgba(56,201,192,.35)!important;}
     [data-testid="stRadio"] [data-baseweb="radio"]>div:first-child{display:none!important;}
     [data-testid="stAlert"]{border-radius:12px!important;}
     </style>""", unsafe_allow_html=True)
@@ -510,7 +511,7 @@ def login_sayfasi():
 
     st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
 
-   [data-testid="stRadio"]>div{background:rgba(13,27,53,.06)!important;border-radius:50px!important;padding:5px!important;display:flex!important;}
+[data-testid="stRadio"]>div{background:rgba(13,27,53,.06)!important;border-radius:50px!important;padding:5px!important;display:flex!important;}
 [data-testid="stRadio"] label{border-radius:50px!important;font-family:'Sora',sans-serif!important;
   font-size:15px!important;font-weight:600!important;padding:11px 32px!important;
   flex:1!important;text-align:center!important;transition:all .25s!important;color:#6B7A99!important;}
