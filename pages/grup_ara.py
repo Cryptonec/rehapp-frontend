@@ -1,12 +1,9 @@
 """
-Grup Oluştur — Eski proje mantığı klonu.
+Grup Oluştur — Performans optimizasyonu.
 
-Performans optimizasyonları:
-- Öğrenci + modül + tanı verisi TEK seferde API'den çekilir, session_state'te cache'lenir
+- st.cache_data ile API verisi cache'lenir (TTL=60s)
+- Cache bust: Lila import sonrası students_cache_bust +1
 - frozenset ile O(1) kesişim kontrolü
-- Aday listesi her seçimde sadece mevcut gruptan türetilir, tüm öğrenciler taranmaz
-- Grup üyeleri session_state["srch_grup_uyeleri"]'nde tutulur (eski proje adı korundu)
-- Cache bust: Lila import sonrası students_cache_bust +1 → veri yeniden çekilir
 """
 import streamlit as st
 from datetime import date
@@ -41,7 +38,6 @@ def rapor_etiketi(rb):
 def turkish_sort_key(s):
     return s.lower().translate(str.maketrans("çğıöşüÇĞİÖŞÜ", "cgiosucgiosu"))
 
-
 def _normalize_module_names(raw_name):
     if not raw_name:
         return []
@@ -59,39 +55,31 @@ def _normalize_module_names(raw_name):
     return parts
 
 
-# ── Veri yükleme — session_state cache ───────────────────────────────────────
+# ── st.cache_data ile API cache ───────────────────────────────────────────────
+
+@st.cache_data(ttl=60, show_spinner=False)
+def _fetch_students(kurum_id, cache_bust=0):
+    raw = api.get_students()
+
+    mods_by_id = {}
+    for s in raw:
+        normalized = []
+        for m in s.get("modules", []):
+            names = _normalize_module_names(m.get("name"))
+            normalized.extend(names if isinstance(names, list) else [])
+        mods_by_id[s["id"]] = frozenset(normalized)
+
+    diags_by_id = {
+        s["id"]: frozenset(d["name"] for d in s.get("diagnoses", []))
+        for s in raw
+    }
+    return raw, mods_by_id, diags_by_id
+
 
 def _load():
-    bust = st.session_state.get("students_cache_bust", 0)
-    if st.session_state.get("_sc_bust") != bust or "_sc_students" not in st.session_state:
-        raw = api.get_students()
-
-        mods_by_id = {}
-        for s in raw:
-            normalized_names = []
-            for m in s.get("modules", []):
-                mod_names = _normalize_module_names(m.get("name"))
-                if not isinstance(mod_names, list):
-                    mod_names = list(mod_names) if mod_names else []
-                normalized_names.extend(mod_names)
-            mods_by_id[s["id"]] = frozenset(normalized_names)
-        diags_by_id = {s["id"]: frozenset(d["name"] for d in s.get("diagnoses", [])) for s in raw}
-        id_by_name  = {s["name"]: s["id"] for s in raw}
-
-        st.session_state.update({
-            "_sc_students":  raw,
-            "_sc_mods":      mods_by_id,
-            "_sc_diags":     diags_by_id,
-            "_sc_id_by_name":id_by_name,
-            "_sc_bust":      bust,
-        })
-
-    return (
-        st.session_state["_sc_students"],
-        st.session_state["_sc_mods"],
-        st.session_state["_sc_diags"],
-        st.session_state["_sc_id_by_name"],
-    )
+    kurum_id = st.session_state.get("kurum_id", 0)
+    bust     = st.session_state.get("students_cache_bust", 0)
+    return _fetch_students(kurum_id, bust)
 
 
 # ── Ana sayfa ─────────────────────────────────────────────────────────────────
@@ -113,13 +101,11 @@ def show():
       border:1.5px solid rgba(56,201,192,.3);border-radius:16px;padding:20px 24px;margin:16px 0;}
     </style>""", unsafe_allow_html=True)
 
-    # Sıfırla butonu
     if st.button("🧹 Sıfırla", key="srch_clear"):
         st.session_state.pop("srch_grup_uyeleri", None)
         st.rerun()
 
-    # ── Veri yükle (cache'li) ─────────────────────────────────────────────────
-    students, mods_by_id, diags_by_id, id_by_name = _load()
+    students, mods_by_id, diags_by_id = _load()
 
     if not students:
         st.info("Önce Lila'dan öğrenci aktarın veya manuel ekleyin.")
@@ -175,10 +161,9 @@ def show():
 
         if not grup:
             aday_isimler = [s["name"] for s in students if s["name"] not in secilen_isimler]
-
         else:
-            mod_setleri  = [mods_by_id.get(u["id"],  frozenset()) for u in grup]
-            diag_setleri = [diags_by_id.get(u["id"], frozenset()) for u in grup]
+            mod_setleri   = [mods_by_id.get(u["id"], frozenset()) for u in grup]
+            diag_setleri  = [diags_by_id.get(u["id"], frozenset()) for u in grup]
             mevcut_modler = frozenset.intersection(*mod_setleri)
             mevcut_diag   = frozenset.intersection(*diag_setleri)
 
@@ -190,25 +175,17 @@ def show():
             for s in students:
                 if s["name"] in secilen_isimler:
                     continue
-
-                s_mods  = mods_by_id.get(s["id"],  frozenset())
+                s_mods  = mods_by_id.get(s["id"], frozenset())
                 s_diags = diags_by_id.get(s["id"], frozenset())
-
-                # 1. Modül uyumu
                 if not (s_mods & mevcut_modler):
                     continue
-
-                # 2. Tanı uyumu
                 if mevcut_diag and s_diags and not (s_diags & mevcut_diag):
                     continue
-
-                # 3. Yaş uyumu — max 4 yıl (48 ay)
                 s_yas = age_years(s.get("dob"))
                 if s_yas is None:
                     continue
                 if max(yas_max, s_yas) - min(yas_min, s_yas) > 4:
                     continue
-
                 aday_isimler.append(s["name"])
 
         aday_isimler.sort(key=turkish_sort_key)
@@ -232,7 +209,7 @@ def show():
 
         if siradaki_lbl != "— Seçiniz —":
             siradaki = aday_map.get(siradaki_lbl, siradaki_lbl)
-            s = s_map.get(siradaki, {})
+            s   = s_map.get(siradaki, {})
             sid = s.get("id")
             st.session_state["srch_grup_uyeleri"].append({
                 "id":          sid,
@@ -251,7 +228,7 @@ def show():
     if len(grup) >= 2:
         st.divider()
 
-        mod_setleri  = [mods_by_id.get(u["id"],  frozenset()) for u in grup]
+        mod_setleri  = [mods_by_id.get(u["id"], frozenset()) for u in grup]
         diag_setleri = [diags_by_id.get(u["id"], frozenset()) for u in grup]
         ortak_modul  = frozenset.intersection(*mod_setleri)
         ortak_tani   = frozenset.intersection(*diag_setleri)
@@ -274,10 +251,7 @@ def show():
             for u in uyarilar:
                 st.warning(u)
         else:
-            mod_badges = "".join(
-                f'<span class="mod-badge">{m}</span>'
-                for m in sorted(ortak_modul)
-            )
+            mod_badges  = "".join(f'<span class="mod-badge">{m}</span>' for m in sorted(ortak_modul))
             isimler_str = "  ·  ".join(u["name"] for u in grup)
             yas_str     = f"{yas_farki} yıl fark" if yas_farki is not None else "—"
 
