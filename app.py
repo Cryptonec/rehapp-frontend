@@ -482,15 +482,20 @@ def login_sayfasi():
     st.markdown("""
     <style>
     @keyframes drop-in{from{opacity:0;transform:translateY(-20px) scale(.95)}to{opacity:1;transform:none}}
+    @keyframes rh-in{from{opacity:0;transform:scale(0) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
+    @keyframes rh-bounce{0%,100%{transform:translateY(0)}40%{transform:translateY(-14px)}65%{transform:translateY(-6px)}}
     .login-card{animation:drop-in .5s cubic-bezier(.34,1.3,.64,1) both;}
+    .ld1{background:#2756D6;animation:rh-in .35s cubic-bezier(.34,1.56,.64,1) .05s both, rh-bounce .7s ease-in-out .8s 3;}
+    .ld2{background:#38C9C0;animation:rh-in .35s cubic-bezier(.34,1.56,.64,1) .18s both, rh-bounce .7s ease-in-out .95s 3;}
+    .ld3{background:#F5883A;animation:rh-in .35s cubic-bezier(.34,1.56,.64,1) .31s both, rh-bounce .7s ease-in-out 1.1s 3;}
     </style>
     <div class="login-card" style="text-align:center;padding:48px 0 32px;">
-      <div style="display:flex;gap:8px;justify-content:center;margin-bottom:12px;">
-        <div style="width:12px;height:12px;border-radius:50%;background:#2756D6;"></div>
-        <div style="width:12px;height:12px;border-radius:50%;background:#38C9C0;"></div>
-        <div style="width:12px;height:12px;border-radius:50%;background:#F5883A;"></div>
+      <div style="display:flex;gap:10px;justify-content:center;margin-bottom:10px;">
+        <div class="ld1" style="width:16px;height:16px;border-radius:50%;"></div>
+        <div class="ld2" style="width:16px;height:16px;border-radius:50%;"></div>
+        <div class="ld3" style="width:16px;height:16px;border-radius:50%;"></div>
       </div>
-      <div style="font-family:Sora,sans-serif;font-size:36px;font-weight:800;color:#0D1B35;letter-spacing:-1.5px;">
+      <div style="font-family:Sora,sans-serif;font-size:40px;font-weight:800;color:#0D1B35;letter-spacing:-1.5px;">
         Reh<span style="color:#38C9C0;">app</span>
       </div>
       <div style="font-size:13px;color:#6B7A99;margin-top:6px;font-weight:400;">
