@@ -43,19 +43,15 @@ def turkish_sort_key(s):
 
 
 def _normalize_module_names(raw_name):
-    """Bozuk/HTML enjekte edilmiş modül isimlerini temizleyip liste döndürür."""
     if not raw_name:
         return []
-
     txt = str(raw_name).strip()
     if not txt:
         return []
-
     if "<" in txt and "mod-badge" in txt:
         badges = re.findall(r'<span\s+class=["\']mod-badge["\']>(.*?)</span>', txt, flags=re.IGNORECASE)
         if badges:
             return [unescape(b).strip() for b in badges if unescape(b).strip()]
-
     protected = re.sub(r"</(span|div|p|li|br)\s*>", " / ", txt, flags=re.IGNORECASE)
     cleaned = re.sub(r"<[^>]+>", "", protected)
     cleaned = unescape(cleaned).strip()
@@ -66,15 +62,10 @@ def _normalize_module_names(raw_name):
 # ── Veri yükleme — session_state cache ───────────────────────────────────────
 
 def _load():
-    """
-    Öğrenci verisini session_state'te cache'ler.
-    students_cache_bust değişince (Lila import sonrası) yeniden yükler.
-    """
     bust = st.session_state.get("students_cache_bust", 0)
     if st.session_state.get("_sc_bust") != bust or "_sc_students" not in st.session_state:
         raw = api.get_students()
 
-        # Her öğrenci için frozenset — kesişim O(1)
         mods_by_id = {}
         for s in raw:
             normalized_names = []
@@ -85,8 +76,6 @@ def _load():
                 normalized_names.extend(mod_names)
             mods_by_id[s["id"]] = frozenset(normalized_names)
         diags_by_id = {s["id"]: frozenset(d["name"] for d in s.get("diagnoses", [])) for s in raw}
-
-        # Hızlı isim→id haritası
         id_by_name  = {s["name"]: s["id"] for s in raw}
 
         st.session_state.update({
@@ -136,7 +125,6 @@ def show():
         st.info("Önce Lila'dan öğrenci aktarın veya manuel ekleyin.")
         return
 
-    # Session state
     if "srch_grup_uyeleri" not in st.session_state:
         st.session_state["srch_grup_uyeleri"] = []
 
@@ -144,7 +132,7 @@ def show():
     secilen_isimler = {u["name"] for u in grup}
 
     st.markdown("#### 👤 Grup üyelerini seçin")
-    st.caption("Parantez içi rapor durumu gösterir · Sadece uyumlu öğrenciler listelenir")
+    st.caption("Parantez içi rapor durumu gösterir · Sadece uyumlu öğrenciler listelenir · Max 4 yaş farkı")
 
     # ── Seçili üyeler ─────────────────────────────────────────────────────────
     for i, uye in enumerate(grup):
@@ -152,9 +140,9 @@ def show():
             f'<span class="mod-badge">{m}</span>'
             for m in uye.get("mod_adlari", [])
         )
-        renk      = rapor_renk(uye.get("rapor_bitis"))
-        etiket_str= rapor_etiketi(uye.get("rapor_bitis"))
-        is_last   = (i == len(grup) - 1)
+        renk       = rapor_renk(uye.get("rapor_bitis"))
+        etiket_str = rapor_etiketi(uye.get("rapor_bitis"))
+        is_last    = (i == len(grup) - 1)
 
         col_kart, col_x = st.columns([10, 1])
         with col_kart:
@@ -174,24 +162,29 @@ def show():
                 '</div>'
             )
             st.markdown(html, unsafe_allow_html=True)
+        with col_x:
+            if is_last:
+                st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
+                if st.button("✕", key=f"srch_sil_{i}", help="Bu üyeyi çıkar"):
+                    st.session_state["srch_grup_uyeleri"].pop()
+                    st.rerun()
+
     # ── Sonraki aday hesaplama ────────────────────────────────────────────────
     if len(grup) < 10:
         etiket_lbl = "İlk öğrenciyi seçin" if not grup else f"{len(grup)+1}. üyeyi seçin"
 
         if not grup:
-            # İlk seçimde herkes
             aday_isimler = [s["name"] for s in students if s["name"] not in secilen_isimler]
 
         else:
-            # Grubun mevcut kesişimleri — frozenset, O(1)
             mod_setleri  = [mods_by_id.get(u["id"],  frozenset()) for u in grup]
             diag_setleri = [diags_by_id.get(u["id"], frozenset()) for u in grup]
-            mevcut_modler= frozenset.intersection(*mod_setleri)
-            mevcut_diag  = frozenset.intersection(*diag_setleri)
+            mevcut_modler = frozenset.intersection(*mod_setleri)
+            mevcut_diag   = frozenset.intersection(*diag_setleri)
 
-            doblar   = [u["dob"] for u in grup if u.get("dob")]
-            yas_min  = min(age_years(d) for d in doblar) if doblar else 0
-            yas_max  = max(age_years(d) for d in doblar) if doblar else 100
+            doblar  = [u["dob"] for u in grup if u.get("dob")]
+            yas_min = min(age_years(d) for d in doblar) if doblar else 0
+            yas_max = max(age_years(d) for d in doblar) if doblar else 100
 
             aday_isimler = []
             for s in students:
@@ -201,27 +194,25 @@ def show():
                 s_mods  = mods_by_id.get(s["id"],  frozenset())
                 s_diags = diags_by_id.get(s["id"], frozenset())
 
-                # 1. Modül uyumu — ortak modül kalmalı
+                # 1. Modül uyumu
                 if not (s_mods & mevcut_modler):
                     continue
 
-                # 2. Tanı uyumu — her iki tarafta tanı varsa kesişim zorunlu
+                # 2. Tanı uyumu
                 if mevcut_diag and s_diags and not (s_diags & mevcut_diag):
                     continue
 
-                # 3. Yaş uyumu — yeni üye eklenince max fark 3 yılı geçmemeli
+                # 3. Yaş uyumu — max 4 yıl (48 ay)
                 s_yas = age_years(s.get("dob"))
                 if s_yas is None:
                     continue
-                if max(yas_max, s_yas) - min(yas_min, s_yas) > 3:
+                if max(yas_max, s_yas) - min(yas_min, s_yas) > 4:
                     continue
 
                 aday_isimler.append(s["name"])
 
-        # Türkçe sırala
         aday_isimler.sort(key=turkish_sort_key)
 
-        # Dropdown etiketi — rapor durumu
         s_map    = {s["name"]: s for s in students}
         aday_lst = []
         aday_map = {}
@@ -271,7 +262,6 @@ def show():
             yaslar    = [age_years(d) for d in doblar]
             yas_farki = round(max(yaslar) - min(yaslar), 2)
 
-        # Uyarı kontrolleri
         uyarilar = []
         if all(diags_by_id.get(u["id"]) for u in grup) and not ortak_tani:
             uyarilar.append("⚠️ Ortak tanı yok — bu öğrenciler birlikte gruplanamaz.")
