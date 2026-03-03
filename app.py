@@ -562,22 +562,23 @@ def login_sayfasi():
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# ROUTING
+# ROUTING — ana uygulama sadece token + kurum_id varsa çalışır
 # ══════════════════════════════════════════════════════════════════════════════
 current_page = st.session_state.get("page")
 
-if not st.session_state.get("token"):
+_token    = st.session_state.get("token")
+_kurum_id = st.session_state.get("kurum_id")
+
+if not _token or not _kurum_id:
+    # Oturum bozuksa temizle
+    if _token and not _kurum_id:
+        st.session_state.clear()
+        st.query_params.clear()
+    # Login veya landing göster, sonra HARD STOP
     if current_page == "login":
         login_sayfasi()
     else:
         landing_sayfasi()
-    st.stop()
-
-# Token var ama kurum_id yoksa → oturum bozuk
-if not st.session_state.get("kurum_id"):
-    st.session_state.clear()
-    st.query_params.clear()
-    login_sayfasi()
     st.stop()
 
 
