@@ -558,12 +558,14 @@ if not st.session_state.get("token"):
         login_sayfasi()
     else:
         landing_sayfasi()
+    st.stop()
 
 # Token var ama kurum_id yoksa → oturum bozuk
 if not st.session_state.get("kurum_id"):
     st.session_state.clear()
     st.query_params.clear()
     login_sayfasi()
+    st.stop()
 
 
 # ══════════════════════════════════════════════════════════════════════════════
