@@ -28,6 +28,10 @@ if params.get("p") == "login" and not st.session_state.get("token"):
 # LANDING PAGE — saf HTML, Streamlit widget YOK
 # ══════════════════════════════════════════════════════════════════════════════
 def landing_sayfasi():
+    # Token varsa zaten giriş yapılmış — ana uygulamaya git
+    if st.session_state.get("token") and st.session_state.get("kurum_id"):
+        st.session_state["page"] = "app"
+        st.rerun()
     st.markdown("""<!DOCTYPE html>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&display=swap');
@@ -429,6 +433,10 @@ div[data-testid="collapsedControl"]{display:none!important;}
 # LOGIN / KAYIT SAYFASI
 # ══════════════════════════════════════════════════════════════════════════════
 def login_sayfasi():
+    # Token varsa zaten giriş yapılmış — ana uygulamaya git
+    if st.session_state.get("token") and st.session_state.get("kurum_id"):
+        st.session_state["page"] = "app"
+        st.rerun()
     st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500&display=swap');
