@@ -119,16 +119,10 @@ def admin_pasif(kurum_id):
     return _handle(requests.post(f"{API_URL}/api/admin/kurumlar/{kurum_id}/pasif", headers=_headers()))
 
 def admin_resend_onay_mail(kurum_id):
-    """
-    Bekleyen kurum için onay/e-posta bildirimi tekrar tetikler.
-    Backend sürümleri arasında endpoint adı değişebildiği için
-    birkaç olası route'u sırayla dener.
-    """
-    candidates = [
-        f"{API_URL}/api/admin/kurumlar/{kurum_id}/resend-onay-mail",
-        f"{API_URL}/api/admin/kurumlar/{kurum_id}/resend",
-        f"{API_URL}/api/admin/kurumlar/{kurum_id}/resend-email",
-    ]
+    return _handle(requests.post(
+        f"{API_URL}/api/admin/kurumlar/{kurum_id}/onayla",
+        headers=_headers()
+    ))
 
     last_error = None
     for url in candidates:
