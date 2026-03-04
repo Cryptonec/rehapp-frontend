@@ -68,7 +68,7 @@ def show():
     st.caption("Grup oluşturmada kullanılan eşleştirme tablosu.")
 
     for tani, modul_listesi in TANI_MODUL_MAP.items():
-        kisa = tani.replace(" Olan Bireyler İçin Destek Eğitim Programı", "")
+        kisa = tani
         with st.expander(f"🔵 {kisa}"):
             for m in modul_listesi:
                 st.markdown(f"&nbsp;&nbsp;&nbsp;✅ {m}")
