@@ -518,14 +518,18 @@ def login_sayfasi():
             st.markdown("""
             <style>
             @keyframes lb-bounce{0%,100%{transform:translateY(0)}40%{transform:translateY(-18px)}65%{transform:translateY(-8px)}}
-            .login-balls{display:flex;gap:14px;justify-content:center;padding:48px 0;}
-            .lb1{width:16px;height:16px;border-radius:50%;background:#2756D6;animation:lb-bounce .65s ease-in-out infinite;}
-            .lb2{width:16px;height:16px;border-radius:50%;background:#38C9C0;animation:lb-bounce .65s ease-in-out .15s infinite;}
-            .lb3{width:16px;height:16px;border-radius:50%;background:#F5883A;animation:lb-bounce .65s ease-in-out .3s infinite;}
+            .login-balls{display:flex;gap:14px;justify-content:center;padding:80px 0 48px;}
+            .lb1{width:18px;height:18px;border-radius:50%;background:#2756D6;animation:lb-bounce .65s ease-in-out infinite;}
+            .lb2{width:18px;height:18px;border-radius:50%;background:#38C9C0;animation:lb-bounce .65s ease-in-out .15s infinite;}
+            .lb3{width:18px;height:18px;border-radius:50%;background:#F5883A;animation:lb-bounce .65s ease-in-out .3s infinite;}
+            .login-loading-text{text-align:center;font-family:Sora,sans-serif;font-size:13px;color:#6B7A99;margin-top:-24px;}
             </style>
             <div class="login-balls">
               <div class="lb1"></div><div class="lb2"></div><div class="lb3"></div>
-            </div>""", unsafe_allow_html=True)
+            </div>
+            <div class="login-loading-text">Giriş yapılıyor...</div>
+            """, unsafe_allow_html=True)
+            import time; time.sleep(1.2)
             data = api.login(st.session_state.get("_login_email",""), st.session_state.get("_login_sifre",""))
             st.session_state["login_loading"] = False
             if data and data.get("access_token"):
@@ -604,6 +608,20 @@ st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500&display=swap');
 html,body,[class*="css"]{font-family:'Plus Jakarta Sans',sans-serif!important;font-size:15px!important;}
+
+/* Global sayfa yükleme — Streamlit loading bar yerine toplar */
+@keyframes rh-load-bounce{0%,100%{transform:translateY(0)}40%{transform:translateY(-12px)}65%{transform:translateY(-5px)}}
+[data-testid="stStatusWidget"]{display:none!important;}
+div[class*="stSpinner"]>div{display:none!important;}
+div[class*="stSpinner"]{
+  display:flex!important;gap:10px!important;justify-content:center!important;
+  align-items:center!important;padding:16px!important;}
+div[class*="stSpinner"]::before{
+  content:'';display:inline-block;width:12px;height:12px;border-radius:50%;
+  background:#2756D6;animation:rh-load-bounce .6s ease-in-out infinite;}
+div[class*="stSpinner"]::after{
+  content:'';display:inline-block;width:12px;height:12px;border-radius:50%;
+  background:#38C9C0;animation:rh-load-bounce .6s ease-in-out .15s infinite;}
 .stApp{background:#F0F4FA!important;}
 .block-container{padding:.25rem 1.5rem 4rem!important;max-width:1100px!important;}
 h1,h2,h3{font-family:'Sora',sans-serif!important;color:#0D1B35!important;letter-spacing:-.5px!important;}
