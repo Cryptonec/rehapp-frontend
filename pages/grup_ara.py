@@ -1,9 +1,11 @@
 """
-Grup Oluştur — Performans optimizasyonu.
+Grup Oluştur
 
-- st.cache_data ile API verisi cache'lenir (TTL=60s)
-- Cache bust: Lila import sonrası students_cache_bust +1
-- frozenset ile O(1) kesişim kontrolü
+Doğru gruplama kuralı:
+- Öğrencilerin ORTAK TANISI bulunur
+- O ortak tanıların TANI_MODUL_MAP'teki modül kesişimi hesaplanır
+- Her öğrencinin gerçek modülleri bu izinli modüllerle kesişmeli
+- Max 4 yıl yaş farkı
 """
 import streamlit as st
 from datetime import date
@@ -11,8 +13,39 @@ from html import unescape
 import re
 import api_client as api
 
+TANI_MODUL_MAP = {
+    "Bedensel Yetersizliği Olan Bireyler İçin Destek Eğitim Programı": [
+        "Günlük Yaşam Aktiviteleri"],
+    "Dil ve Konuşma Bozukluğu Olan Bireyler İçin Destek Eğitim Programı": [
+        "Dil"],
+    "Görme Yetersizliği Olan Bireyler İçin Destek Eğitim Programı": [
+        "Dil ve İletişim","Erken Matematik","Günlük Yaşam Becerileri",
+        "Matematik","Okuma ve Yazma","Sosyal Beceriler","Toplumsal Yaşam Becerileri"],
+    "İşitme Yetersizliği Olan Bireyler İçin Destek Eğitim Programı": [
+        "Erken Matematik","Matematik","Okuma ve Yazma","Sosyal İletişim"],
+    "Otizm Spektrum Bozukluğu Olan Bireyler İçin Destek Eğitim Programı": [
+        "Birey ve Çevre","Dil, İletişim ve Oyun","Erken Matematik",
+        "Günlük Yaşam Becerileri","Matematik","Okuma ve Yazma",
+        "Sosyal Beceriler","Toplumsal Yaşam Becerileri"],
+    "Öğrenme Güçlüğü Olan Bireyler İçin Destek Eğitim Programı": [
+        "Dil ve İletişim","Erken Matematik","Matematik","Okuma ve Yazma","Sosyal Etkileşim"],
+    "Zihinsel Yetersizliği Olan Bireyler İçin Destek Eğitim Programı": [
+        "Birey ve Çevre","Dil, İletişim ve Oyun","Erken Matematik",
+        "Günlük Yaşam Becerileri","Matematik","Okuma ve Yazma",
+        "Sosyal Beceriler","Toplumsal Yaşam Becerileri"],
+}
 
-# ── Yardımcı fonksiyonlar ─────────────────────────────────────────────────────
+
+def _tani_seti_modulleri(tani_seti):
+    mod_setleri = [
+        frozenset(TANI_MODUL_MAP[t])
+        for t in tani_seti
+        if t in TANI_MODUL_MAP
+    ]
+    if not mod_setleri:
+        return frozenset()
+    return frozenset.intersection(*mod_setleri)
+
 
 def age_years(dob_str):
     if not dob_str: return None
@@ -55,12 +88,9 @@ def _normalize_module_names(raw_name):
     return parts
 
 
-# ── st.cache_data ile API cache ───────────────────────────────────────────────
-
 @st.cache_data(ttl=60, show_spinner=False)
 def _fetch_students(kurum_id, cache_bust=0):
     raw = api.get_students()
-
     mods_by_id = {}
     for s in raw:
         normalized = []
@@ -68,7 +98,6 @@ def _fetch_students(kurum_id, cache_bust=0):
             names = _normalize_module_names(m.get("name"))
             normalized.extend(names if isinstance(names, list) else [])
         mods_by_id[s["id"]] = frozenset(normalized)
-
     diags_by_id = {
         s["id"]: frozenset(d["name"] for d in s.get("diagnoses", []))
         for s in raw
@@ -81,8 +110,6 @@ def _load():
     bust     = st.session_state.get("students_cache_bust", 0)
     return _fetch_students(kurum_id, bust)
 
-
-# ── Ana sayfa ─────────────────────────────────────────────────────────────────
 
 def show():
     st.markdown("""
@@ -118,9 +145,8 @@ def show():
     secilen_isimler = {u["name"] for u in grup}
 
     st.markdown("#### 👤 Grup üyelerini seçin")
-    st.caption("Parantez içi rapor durumu gösterir · Sadece uyumlu öğrenciler listelenir · Max 4 yaş farkı")
+    st.caption("Ortak tanının modülleri eşleşmeli · Max 4 yaş farkı")
 
-    # ── Seçili üyeler ─────────────────────────────────────────────────────────
     for i, uye in enumerate(grup):
         mod_badges = "".join(
             f'<span class="mod-badge">{m}</span>'
@@ -155,17 +181,18 @@ def show():
                     st.session_state["srch_grup_uyeleri"].pop()
                     st.rerun()
 
-    # ── Sonraki aday hesaplama ────────────────────────────────────────────────
     if len(grup) < 10:
         etiket_lbl = "İlk öğrenciyi seçin" if not grup else f"{len(grup)+1}. üyeyi seçin"
 
         if not grup:
             aday_isimler = [s["name"] for s in students if s["name"] not in secilen_isimler]
         else:
-            mod_setleri   = [mods_by_id.get(u["id"], frozenset()) for u in grup]
             diag_setleri  = [diags_by_id.get(u["id"], frozenset()) for u in grup]
-            mevcut_modler = frozenset.intersection(*mod_setleri)
-            mevcut_diag   = frozenset.intersection(*diag_setleri)
+            ortak_tanilar = frozenset.intersection(*diag_setleri)
+            izin_modulleri = _tani_seti_modulleri(ortak_tanilar)
+
+            grup_mod_setleri = [mods_by_id.get(u["id"], frozenset()) for u in grup]
+            grup_ortak_mod   = frozenset.intersection(*grup_mod_setleri) & izin_modulleri if izin_modulleri else frozenset()
 
             doblar  = [u["dob"] for u in grup if u.get("dob")]
             yas_min = min(age_years(d) for d in doblar) if doblar else 0
@@ -175,17 +202,34 @@ def show():
             for s in students:
                 if s["name"] in secilen_isimler:
                     continue
-                s_mods  = mods_by_id.get(s["id"], frozenset())
+
                 s_diags = diags_by_id.get(s["id"], frozenset())
-                if not (s_mods & mevcut_modler):
+                s_mods  = mods_by_id.get(s["id"],  frozenset())
+
+                # 1. Ortak tanı olmalı
+                s_ortak_tani = s_diags & ortak_tanilar
+                if not s_ortak_tani:
                     continue
-                if mevcut_diag and s_diags and not (s_diags & mevcut_diag):
+
+                # 2. O ortak tanının izin verdiği modüller
+                s_izin = _tani_seti_modulleri(s_ortak_tani)
+
+                # 3. Grubun izinli modülleriyle kesişim
+                ortak_izin = grup_ortak_mod & s_izin if grup_ortak_mod else s_izin & izin_modulleri
+                if not ortak_izin:
                     continue
+
+                # 4. Adayın gerçek modülleri bu kesişimde olmalı
+                if not (s_mods & ortak_izin):
+                    continue
+
+                # 5. Yaş uyumu
                 s_yas = age_years(s.get("dob"))
                 if s_yas is None:
                     continue
                 if max(yas_max, s_yas) - min(yas_min, s_yas) > 4:
                     continue
+
                 aday_isimler.append(s["name"])
 
         aday_isimler.sort(key=turkish_sort_key)
@@ -224,14 +268,15 @@ def show():
         if not aday_lst and grup:
             st.info("Bu gruba eklenebilecek uyumlu öğrenci bulunamadı.")
 
-    # ── Özet + Kaydet ─────────────────────────────────────────────────────────
     if len(grup) >= 2:
         st.divider()
 
-        mod_setleri  = [mods_by_id.get(u["id"], frozenset()) for u in grup]
-        diag_setleri = [diags_by_id.get(u["id"], frozenset()) for u in grup]
-        ortak_modul  = frozenset.intersection(*mod_setleri)
-        ortak_tani   = frozenset.intersection(*diag_setleri)
+        diag_setleri   = [diags_by_id.get(u["id"], frozenset()) for u in grup]
+        ortak_tanilar  = frozenset.intersection(*diag_setleri)
+        izin_modulleri = _tani_seti_modulleri(ortak_tanilar)
+
+        mod_setleri = [mods_by_id.get(u["id"], frozenset()) for u in grup]
+        ortak_modul = frozenset.intersection(*mod_setleri) & izin_modulleri if izin_modulleri else frozenset()
 
         doblar = [u["dob"] for u in grup if u.get("dob")]
         yas_farki = None
@@ -240,10 +285,10 @@ def show():
             yas_farki = round(max(yaslar) - min(yaslar), 2)
 
         uyarilar = []
-        if all(diags_by_id.get(u["id"]) for u in grup) and not ortak_tani:
+        if not ortak_tanilar:
             uyarilar.append("⚠️ Ortak tanı yok — bu öğrenciler birlikte gruplanamaz.")
         if not ortak_modul:
-            uyarilar.append("⚠️ Ortak modül yok — bu öğrenciler birlikte gruplanamaz.")
+            uyarilar.append("⚠️ Ortak tanının modülleri eşleşmiyor — bu öğrenciler birlikte gruplanamaz.")
         if yas_farki is not None and yas_farki > 4:
             uyarilar.append(f"⚠️ Yaş farkı {yas_farki} yıl — 4 yılı aşıyor.")
 
