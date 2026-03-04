@@ -26,15 +26,7 @@ TANI_MODUL_MAP = {
         "Sosyal Beceriler","Toplumsal Yaşam Becerileri"],
 }
 
-# Eski Lila adı → yeni ad alias
-ESKI_ADLAR = {
-    "Bedensel Yetersizliği Olan Bireyler İçin Destek Eğitim Programı": "Bedensel Yetersizliği Olan Bireyler İçin Destek Eğitim Programı",
-    "Dil ve Konuşma Bozukluğu Olan Bireyler İçin Destek Eğitim Programı": "Dil ve Konuşma Bozukluğu Olan Bireyler İçin Destek Eğitim Programı",
-}
-
-# Tüm geçerli modüller (küme)
 GECERLI_MODULLER = {m for v in TANI_MODUL_MAP.values() for m in v}
-# Uzun modül adlarını uzunluğa göre sırala (greedy match için)
 MODUL_LISTESI = sorted(GECERLI_MODULLER, key=len, reverse=True)
 
 
@@ -42,7 +34,6 @@ def norm(s):
     return " ".join(unicodedata.normalize("NFC", s).split()).strip()
 
 def tani_bul(tani_str):
-    """Lila'daki uzun tanı adını TANI_MODUL_MAP anahtarıyla eşleştir."""
     tn = norm(tani_str)
     for key in TANI_MODUL_MAP:
         if norm(key) == tn or norm(key) in tn or tn in norm(key):
@@ -50,10 +41,6 @@ def tani_bul(tani_str):
     return None
 
 def modul_bul_greedy(modul_str):
-    """
-    Eski projeden: greedy modül eşleştirme.
-    Sadece GECERLI_MODULLER'deki modülleri çeker, diğerlerini atlar.
-    """
     kalan = norm(modul_str)
     bulunanlar = []
     while kalan:
@@ -83,7 +70,7 @@ def parse_xls(fb):
     for row in rows:
         cells = re.findall(r'<t[dh][^>]*>(.*?)</t[dh]>', row, re.DOTALL|re.IGNORECASE)
         parsed.append([re.sub(r'<[^>]+>','',c).strip() for c in cells])
-    if len(parsed) < 3: return []
+    if len(parsed) < 3: return [], []
     headers = parsed[2]
     def col(n):
         try: return headers.index(n)
@@ -109,21 +96,17 @@ def parse_xls(fb):
         if idx_rapor is not None and len(row)>idx_rapor:
             try: rapor = datetime.strptime(row[idx_rapor].strip(),"%d.%m.%Y").date().isoformat()
             except: pass
-        # Tanılar — virgülle ayrılmış program listesi
         prog_str = row[idx_prog].strip() if idx_prog is not None and len(row)>idx_prog else ""
         taniler_raw = [t.strip() for t in prog_str.split(",") if t.strip()]
         taniler = []
         for t in taniler_raw:
             k = tani_bul(t)
             if k and k not in taniler: taniler.append(k)
-        # Modüller — greedy match, sadece geçerliler
         modul_str = row[idx_modul].strip() if idx_modul is not None and len(row)>idx_modul else ""
         if modul_str:
             moduller = modul_bul_greedy(modul_str)
         else:
-            # Modül sütunu yoksa tanıdan türet
             moduller = sorted({m for t in taniler for m in TANI_MODUL_MAP.get(t,[])})
-        # Sadece haritadaki modülleri al
         moduller = [m for m in moduller if m in GECERLI_MODULLER]
         if not dob:
             atlananlar.append(tam)
@@ -198,6 +181,15 @@ def show_import():
         if not students:
             st.warning("GRUP eğitimi alan öğrenci bulunamadı."); return
 
+        # Silinecekleri hesapla
+        tum_mevcut = api.get_students()
+        mevcut_names = {s["name"] for s in tum_mevcut}
+        lila_names   = {s["name"] for s in students}
+        silinecekler = [s for s in tum_mevcut if s["name"] not in lila_names]
+
+        yeni     = sum(1 for s in students if s["name"] not in mevcut_names)
+        guncelle = sum(1 for s in students if s["name"] in mevcut_names)
+
         st.markdown(f"""
         <div style='background:linear-gradient(135deg,rgba(66,184,177,.1),rgba(43,82,196,.07));
              border-radius:12px;padding:12px 16px;margin:8px 0 14px;border:1px solid rgba(66,184,177,.2);'>
@@ -205,7 +197,7 @@ def show_import():
           <span style='font-size:12px;color:#6B7A99;margin-left:10px;'>Format: {fmt}</span>
         </div>""", unsafe_allow_html=True)
 
-        # Tablo — temiz bilgiler, kısa tanı adları
+        # Tablo
         rows_html = ""
         for i,s in enumerate(students,1):
             tani_kisa = " / ".join(
@@ -235,19 +227,20 @@ def show_import():
         </table></div>""", unsafe_allow_html=True)
 
         st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
-        mevcut = {s["name"] for s in api.get_students()}
-        yeni    = sum(1 for s in students if s["name"] not in mevcut)
-        guncelle= sum(1 for s in students if s["name"] in mevcut)
 
         c1, c2 = st.columns([3,1])
         with c1:
-            if yeni:     st.markdown(f"🟢 **{yeni}** yeni öğrenci eklenecek")
-            if guncelle: st.markdown(f"🔄 **{guncelle}** öğrenci güncellenecek")
+            if yeni:        st.markdown(f"🟢 **{yeni}** yeni öğrenci eklenecek")
+            if guncelle:    st.markdown(f"🔄 **{guncelle}** öğrenci güncellenecek")
+            if silinecekler:
+                isimler = ", ".join(s["name"] for s in silinecekler[:5])
+                fazla   = f" ve {len(silinecekler)-5} kişi daha" if len(silinecekler) > 5 else ""
+                st.markdown(f"🗑️ **{len(silinecekler)}** öğrenci silinecek: {isimler}{fazla}")
         with c2:
             if st.button("🚀 İçe Aktar", type="primary", use_container_width=True, key="lila_btn"):
-                _do_import(students, mevcut)
+                _do_import(students, mevcut_names, silinecekler)
 
-def _do_import(students, mevcut_names):
+def _do_import(students, mevcut_names, silinecekler):
     mt = {d["name"]:d["id"] for d in api.get_diagnoses()}
     mm = {m["name"]:m["id"] for m in api.get_modules()}
     for t in {t for s in students for t in s["taniler"]}:
@@ -259,8 +252,11 @@ def _do_import(students, mevcut_names):
             r=api.create_module(m)
             if r: mm[m]=r["id"]
     id_map={s["name"]:s["id"] for s in api.get_students()}
-    eklendi=guncellendi=hatali=0
+    eklendi=guncellendi=silindi=hatali=0
+    toplam = len(students) + len(silinecekler)
     prog=st.progress(0)
+
+    # Ekle / güncelle
     for i,s in enumerate(students):
         diag_ids=[mt[t] for t in s["taniler"] if t in mt]
         mod_ids =[mm[m] for m in s["moduller"] if m in mm]
@@ -276,14 +272,24 @@ def _do_import(students, mevcut_names):
                 if r: eklendi+=1
                 else: hatali+=1
         except: hatali+=1
-        prog.progress((i+1)/len(students))
+        prog.progress((i+1)/toplam)
+
+    # Sil
+    for j,s in enumerate(silinecekler):
+        try:
+            api.delete_student(s["id"])
+            silindi+=1
+        except: hatali+=1
+        prog.progress((len(students)+j+1)/toplam)
+
     prog.empty()
     st.markdown(f"""
     <div style='background:linear-gradient(135deg,rgba(66,184,177,.12),rgba(43,82,196,.08));
          border-radius:12px;padding:14px 18px;border:1px solid rgba(66,184,177,.25);'>
       <b style='font-family:Sora,sans-serif;color:#1A2B4C;'>✅ Tamamlandı</b><br>
       <span style='font-size:13px;color:#1A2B4C;'>
-        🟢 {eklendi} yeni &nbsp;·&nbsp; 🔄 {guncellendi} güncellendi &nbsp;·&nbsp; ❌ {hatali} hata
+        🟢 {eklendi} yeni &nbsp;·&nbsp; 🔄 {guncellendi} güncellendi
+        &nbsp;·&nbsp; 🗑️ {silindi} silindi &nbsp;·&nbsp; ❌ {hatali} hata
       </span>
     </div>""", unsafe_allow_html=True)
     st.session_state["lila_ac"]=False
