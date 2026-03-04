@@ -198,6 +198,12 @@ def show():
                 '</div>'
             )
             st.markdown(html, unsafe_allow_html=True)
+        with col_x:
+            if is_last:
+                st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
+                if st.button("✕", key=f"srch_sil_{i}", help="Bu üyeyi çıkar"):
+                    st.session_state["srch_grup_uyeleri"].pop()
+                    st.rerun()
     # ── Sonraki aday hesaplama ────────────────────────────────────────────────
     if len(grup) < 10:
         etiket_lbl = "İlk öğrenciyi seçin" if not grup else f"{len(grup)+1}. üyeyi seçin"
