@@ -91,7 +91,7 @@ def parse_xls(fb):
     idx_adi=col("ADI"); idx_soy=col("SOYADI"); idx_dob=col("DOĞUM TARİHİ")
     idx_prog=col("EĞİTİM PROGRAMI"); idx_modul=col("EĞİTİM MODÜLÜ")
     idx_rapor=col("BİTİŞ TARİHİ"); idx_sekil=col("EĞİTSEL TANI VE EĞİTİM ÖNERİSİ")
-    students=[]; seen=set()
+    students=[]; seen=set(); atlananlar=[]
     for row in parsed[3:]:
         if not row: continue
         sekil = row[idx_sekil].upper() if idx_sekil is not None and len(row)>idx_sekil else ""
@@ -125,8 +125,11 @@ def parse_xls(fb):
             moduller = sorted({m for t in taniler for m in TANI_MODUL_MAP.get(t,[])})
         # Sadece haritadaki modülleri al
         moduller = [m for m in moduller if m in GECERLI_MODULLER]
+        if not dob:
+            atlananlar.append(tam)
+            continue
         students.append({"name":tam,"dob":dob,"rapor_bitis":rapor,"taniler":taniler,"moduller":moduller})
-    return students
+    return students, atlananlar
 
 def parse_xlsx(fb):
     ns={"ns":"http://schemas.openxmlformats.org/spreadsheetml/2006/main"}
@@ -145,7 +148,7 @@ def parse_xlsx(fb):
             col="".join(x for x in c.get("r","") if x.isalpha())
             row[col]=cv(c)
         rows.append(row)
-    seen=set(); students=[]
+    seen=set(); students=[]; atlananlar=[]
     for row in rows[3:]:
         if "GRUP" not in row.get("BN","").upper(): continue
         tam=f"{row.get('D','').strip()} {row.get('E','').strip()}".strip()
@@ -162,9 +165,13 @@ def parse_xlsx(fb):
         else:
             moduller=sorted({m for t in taniler for m in TANI_MODUL_MAP.get(t,[])})
         moduller=[m for m in moduller if m in GECERLI_MODULLER]
-        students.append({"name":tam,"dob":excel_serial(row.get("J","")),"rapor_bitis":excel_serial(row.get("BK","")),
+        _dob = excel_serial(row.get("J",""))
+        if not _dob:
+            atlananlar.append(tam)
+            continue
+        students.append({"name":tam,"dob":_dob,"rapor_bitis":excel_serial(row.get("BK","")),
                          "taniler":taniler,"moduller":moduller})
-    return students
+    return students, atlananlar
 
 def show_import():
     expanded = st.session_state.get("lila_ac", False)
@@ -176,10 +183,17 @@ def show_import():
         with st.spinner("Okunuyor..."):
             try:
                 fb = uploaded.read()
-                students = parse_xlsx(fb) if uploaded.name.endswith(".xlsx") else parse_xls(fb)
+                result = parse_xlsx(fb) if uploaded.name.endswith(".xlsx") else parse_xls(fb)
+                students, atlananlar = result
                 fmt = "XLSX" if uploaded.name.endswith(".xlsx") else "XLS"
             except Exception as e:
                 st.error(f"Dosya okunamadı: {e}"); return
+
+        if atlananlar:
+            st.warning(
+                f"⚠️ **{len(atlananlar)} öğrenci atlandı** — doğum tarihi eksik:\n\n" +
+                "\n".join(f"• {isim}" for isim in atlananlar)
+            )
 
         if not students:
             st.warning("GRUP eğitimi alan öğrenci bulunamadı."); return
