@@ -524,9 +524,26 @@ def login_sayfasi():
             if not email.strip() or not sifre:
                 st.error("E-posta ve şifre boş olamaz.")
             else:
-                with st.spinner("Giriş yapılıyor..."):
-                    data = api.login(email.strip(), sifre)
-                if data and data.get("access_token"):
+                st.session_state["login_loading"] = True
+                st.session_state["_login_email"] = email.strip()
+                st.session_state["_login_sifre"] = sifre
+                st.rerun()
+
+        if st.session_state.get("login_loading"):
+            st.markdown("""
+            <style>
+            @keyframes lb-bounce{0%,100%{transform:translateY(0)}40%{transform:translateY(-16px)}65%{transform:translateY(-7px)}}
+            .login-balls{display:flex;gap:12px;justify-content:center;padding:20px 0;}
+            .lb1{width:15px;height:15px;border-radius:50%;background:#2756D6;animation:lb-bounce .65s ease-in-out infinite;}
+            .lb2{width:15px;height:15px;border-radius:50%;background:#38C9C0;animation:lb-bounce .65s ease-in-out .15s infinite;}
+            .lb3{width:15px;height:15px;border-radius:50%;background:#F5883A;animation:lb-bounce .65s ease-in-out .3s infinite;}
+            </style>
+            <div class="login-balls">
+              <div class="lb1"></div><div class="lb2"></div><div class="lb3"></div>
+            </div>""", unsafe_allow_html=True)
+            data = api.login(st.session_state.get("_login_email",""), st.session_state.get("_login_sifre",""))
+            st.session_state["login_loading"] = False
+            if data and data.get("access_token"):
                     st.session_state["token"]       = data["access_token"]
                     st.session_state["kurum_id"]    = data.get("kurum_id")
                     st.session_state["kurum_ad"]    = data.get("kurum_ad", "")
