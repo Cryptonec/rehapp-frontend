@@ -94,13 +94,13 @@ def show():
           <tbody style='background:white;'>{rows_html}</tbody>
         </table></div>""", unsafe_allow_html=True)
 
-        st.markdown("#### ✏️ Öğrenci Düzenle")
-        for s in filtered:
+        with st.expander("✏️ Öğrenci Düzenle / Sil", expanded=False):
+          for s in filtered:
             renk, etiket = rapor_durumu(s.get("rapor_bitis"))
             baslik = f"{renk} {s['name']}"
             if etiket:
                 baslik += f"  ·  {etiket}"
-            with st.expander(baslik):
+            with st.expander(baslik, expanded=False):
 
                 with st.form(f"edit_{s['id']}"):
                     fc1, fc2, fc3 = st.columns(3)
