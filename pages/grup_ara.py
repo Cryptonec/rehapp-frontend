@@ -2,9 +2,8 @@
 Grup Oluştur
 
 Doğru gruplama kuralı:
-- Öğrencilerin ORTAK TANISI bulunur
-- O ortak tanıların TANI_MODUL_MAP'teki modül kesişimi hesaplanır
-- Her öğrencinin gerçek modülleri bu izinli modüllerle kesişmeli
+- Her öğrencinin modülleri tanıya göre eşlenir (TANI_MODUL_MAP)
+- Aynı tanıdan gelen aynı modül varsa grup kurulabilir
 - Max 4 yıl yaş farkı
 """
 import streamlit as st
@@ -36,41 +35,6 @@ TANI_MODUL_MAP = {
 }
 
 
-def _tani_seti_modulleri(tani_seti):
-    mod_setleri = [
-        frozenset(TANI_MODUL_MAP[t])
-        for t in tani_seti
-        if t in TANI_MODUL_MAP
-    ]
-    if not mod_setleri:
-        return frozenset()
-    return frozenset.intersection(*mod_setleri)
-
-
-def age_years(dob_str):
-    if not dob_str: return None
-    try: return (date.today() - date.fromisoformat(dob_str)).days / 365.25
-    except: return None
-
-def rapor_renk(rb):
-    if not rb: return "#22C55E"
-    try:
-        k = (date.fromisoformat(str(rb)[:10]) - date.today()).days
-        return "#EF4444" if k < 0 else "#F59E0B" if k <= 30 else "#22C55E"
-    except: return "#22C55E"
-
-def rapor_etiketi(rb):
-    if not rb: return ""
-    try:
-        k = (date.fromisoformat(str(rb)[:10]) - date.today()).days
-        if k < 0:   return " (rapor bitti)"
-        if k <= 30: return f" (rapor bitmesine {k} gün)"
-        return ""
-    except: return ""
-
-def turkish_sort_key(s):
-    return s.lower().translate(str.maketrans("çğıöşüÇĞİÖŞÜ", "cgiosucgiosu"))
-
 def _normalize_module_names(raw_name):
     if not raw_name:
         return []
@@ -88,21 +52,78 @@ def _normalize_module_names(raw_name):
     return parts
 
 
+def age_years(dob_str):
+    if not dob_str: return None
+    try: return (date.today() - date.fromisoformat(dob_str)).days / 365.25
+    except: return None
+
+
+def rapor_renk(rb):
+    if not rb: return "#22C55E"
+    try:
+        k = (date.fromisoformat(str(rb)[:10]) - date.today()).days
+        return "#EF4444" if k < 0 else "#F59E0B" if k <= 30 else "#22C55E"
+    except: return "#22C55E"
+
+
+def rapor_etiketi(rb):
+    if not rb: return ""
+    try:
+        k = (date.fromisoformat(str(rb)[:10]) - date.today()).days
+        if k < 0:   return " (rapor bitti)"
+        if k <= 30: return f" (rapor bitmesine {k} gün)"
+        return ""
+    except: return ""
+
+
+def turkish_sort_key(s):
+    return s.lower().translate(str.maketrans("çğıöşüÇĞİÖŞÜ", "cgiosucgiosu"))
+
+
+def ortak_tani_modul_ciftleri(uye_listesi, tani_modul_by_id):
+    """Her üye için (tani, modul) çiftleri üret, kesişimi al."""
+    cift_setleri = []
+    for u in uye_listesi:
+        tm = tani_modul_by_id.get(u["id"], {})
+        ciftler = frozenset(
+            (tani, modul)
+            for tani, moduller in tm.items()
+            for modul in moduller
+        )
+        cift_setleri.append(ciftler)
+    if not cift_setleri:
+        return frozenset()
+    return frozenset.intersection(*cift_setleri)
+
+
 @st.cache_data(ttl=60, show_spinner=False)
 def _fetch_students(kurum_id, cache_bust=0):
     raw = api.get_students()
     mods_by_id = {}
+    diags_by_id = {}
+    tani_modul_by_id = {}
+
     for s in raw:
         normalized = []
         for m in s.get("modules", []):
             names = _normalize_module_names(m.get("name"))
             normalized.extend(names if isinstance(names, list) else [])
-        mods_by_id[s["id"]] = frozenset(normalized)
-    diags_by_id = {
-        s["id"]: frozenset(d["name"] for d in s.get("diagnoses", []))
-        for s in raw
-    }
-    return raw, mods_by_id, diags_by_id
+        s_mods  = frozenset(normalized)
+        s_diags = frozenset(d["name"] for d in s.get("diagnoses", []))
+
+        mods_by_id[s["id"]]  = s_mods
+        diags_by_id[s["id"]] = s_diags
+
+        tm = {}
+        for tani in s_diags:
+            if tani in TANI_MODUL_MAP:
+                izin   = frozenset(TANI_MODUL_MAP[tani])
+                gercek = s_mods & izin
+                if gercek:
+                    tm[tani] = gercek
+        tani_modul_by_id[s["id"]] = tm
+
+    return raw, mods_by_id, diags_by_id, tani_modul_by_id
 
 
 def _load():
@@ -132,7 +153,7 @@ def show():
         st.session_state.pop("srch_grup_uyeleri", None)
         st.rerun()
 
-    students, mods_by_id, diags_by_id = _load()
+    students, mods_by_id, diags_by_id, tani_modul_by_id = _load()
 
     if not students:
         st.info("Önce Lila'dan öğrenci aktarın veya manuel ekleyin.")
@@ -145,7 +166,7 @@ def show():
     secilen_isimler = {u["name"] for u in grup}
 
     st.markdown("#### 👤 Grup üyelerini seçin")
-    st.caption("Ortak tanının modülleri eşleşmeli · Max 4 yaş farkı")
+    st.caption("Aynı tanıdan gelen aynı modül eşleşmeli · Max 4 yaş farkı")
 
     for i, uye in enumerate(grup):
         mod_badges = "".join(
@@ -187,12 +208,7 @@ def show():
         if not grup:
             aday_isimler = [s["name"] for s in students if s["name"] not in secilen_isimler]
         else:
-            diag_setleri  = [diags_by_id.get(u["id"], frozenset()) for u in grup]
-            ortak_tanilar = frozenset.intersection(*diag_setleri)
-            izin_modulleri = _tani_seti_modulleri(ortak_tanilar)
-
-            grup_mod_setleri = [mods_by_id.get(u["id"], frozenset()) for u in grup]
-            grup_ortak_mod   = frozenset.intersection(*grup_mod_setleri) & izin_modulleri if izin_modulleri else frozenset()
+            mevcut_ciftler = ortak_tani_modul_ciftleri(grup, tani_modul_by_id)
 
             doblar  = [u["dob"] for u in grup if u.get("dob")]
             yas_min = min(age_years(d) for d in doblar) if doblar else 0
@@ -203,27 +219,16 @@ def show():
                 if s["name"] in secilen_isimler:
                     continue
 
-                s_diags = diags_by_id.get(s["id"], frozenset())
-                s_mods  = mods_by_id.get(s["id"],  frozenset())
+                tm = tani_modul_by_id.get(s["id"], {})
+                s_ciftler = frozenset(
+                    (tani, modul)
+                    for tani, moduller in tm.items()
+                    for modul in moduller
+                )
 
-                # 1. Ortak tanı olmalı
-                s_ortak_tani = s_diags & ortak_tanilar
-                if not s_ortak_tani:
+                if not (s_ciftler & mevcut_ciftler):
                     continue
 
-                # 2. O ortak tanının izin verdiği modüller
-                s_izin = _tani_seti_modulleri(s_ortak_tani)
-
-                # 3. Grubun izinli modülleriyle kesişim
-                ortak_izin = grup_ortak_mod & s_izin if grup_ortak_mod else s_izin & izin_modulleri
-                if not ortak_izin:
-                    continue
-
-                # 4. Adayın gerçek modülleri bu kesişimde olmalı
-                if not (s_mods & ortak_izin):
-                    continue
-
-                # 5. Yaş uyumu
                 s_yas = age_years(s.get("dob"))
                 if s_yas is None:
                     continue
@@ -271,12 +276,8 @@ def show():
     if len(grup) >= 2:
         st.divider()
 
-        diag_setleri   = [diags_by_id.get(u["id"], frozenset()) for u in grup]
-        ortak_tanilar  = frozenset.intersection(*diag_setleri)
-        izin_modulleri = _tani_seti_modulleri(ortak_tanilar)
-
-        mod_setleri = [mods_by_id.get(u["id"], frozenset()) for u in grup]
-        ortak_modul = frozenset.intersection(*mod_setleri) & izin_modulleri if izin_modulleri else frozenset()
+        mevcut_ciftler = ortak_tani_modul_ciftleri(grup, tani_modul_by_id)
+        ortak_modul    = frozenset(modul for _, modul in mevcut_ciftler)
 
         doblar = [u["dob"] for u in grup if u.get("dob")]
         yas_farki = None
@@ -285,10 +286,8 @@ def show():
             yas_farki = round(max(yaslar) - min(yaslar), 2)
 
         uyarilar = []
-        if not ortak_tanilar:
-            uyarilar.append("⚠️ Ortak tanı yok — bu öğrenciler birlikte gruplanamaz.")
         if not ortak_modul:
-            uyarilar.append("⚠️ Ortak tanının modülleri eşleşmiyor — bu öğrenciler birlikte gruplanamaz.")
+            uyarilar.append("⚠️ Aynı tanıdan gelen ortak modül yok — bu öğrenciler birlikte gruplanamaz.")
         if yas_farki is not None and yas_farki > 4:
             uyarilar.append(f"⚠️ Yaş farkı {yas_farki} yıl — 4 yılı aşıyor.")
 
