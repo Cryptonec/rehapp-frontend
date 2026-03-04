@@ -89,9 +89,9 @@ nav{position:fixed;top:0;left:0;right:0;z-index:1000;padding:0 6%;
 @keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(1.3)}}
 @keyframes dot-drop{from{opacity:0;transform:scale(0) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
 @keyframes dot-bounce{0%,100%{transform:translateY(0)}40%{transform:translateY(-12px)}65%{transform:translateY(-5px)}}
-.d1{animation:dot-drop .35s cubic-bezier(.34,1.56,.64,1) .05s both, dot-bounce .7s ease-in-out 1s 3;}
-.d2{animation:dot-drop .35s cubic-bezier(.34,1.56,.64,1) .18s both, dot-bounce .7s ease-in-out 1.15s 3;}
-.d3{animation:dot-drop .35s cubic-bezier(.34,1.56,.64,1) .31s both, dot-bounce .7s ease-in-out 1.3s 3;}
+.d1{animation:dot-drop .35s cubic-bezier(.34,1.56,.64,1) .05s both;}
+.d2{animation:dot-drop .35s cubic-bezier(.34,1.56,.64,1) .18s both;}
+.d3{animation:dot-drop .35s cubic-bezier(.34,1.56,.64,1) .31s both;}
 
 .hero-title{font-family:Sora,sans-serif;font-size:clamp(36px,6vw,72px);font-weight:800;
   line-height:1.08;letter-spacing:-2.5px;color:var(--navy);margin-bottom:24px;}
