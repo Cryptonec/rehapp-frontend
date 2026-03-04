@@ -1,8 +1,5 @@
 """
 Öğrenciler sayfası.
-- Lila import en üstte
-- Öğrenciler kart listesi halinde, kapalı gelir
-- Tek tek açılarak düzenlenebilir
 """
 import streamlit as st
 from datetime import date
@@ -32,7 +29,6 @@ def rapor_durumu(rapor_bitis_str):
 def show():
     st.header("👤 Öğrenciler")
 
-    # ── Lila Import ───────────────────────────────────────────────────────────
     lila_import.show_import()
     st.divider()
 
@@ -64,6 +60,7 @@ def show():
     if not filtered:
         st.info("Öğrenci bulunamadı.")
     else:
+        # ── Tablo ─────────────────────────────────────────────────────────────
         rows_html = ""
         for i, s in enumerate(filtered, 1):
             renk_emoji, etiket = rapor_durumu(s.get("rapor_bitis"))
@@ -86,7 +83,7 @@ def show():
             </tr>"""
 
         st.markdown(f"""
-        <div style='overflow-x:auto;border-radius:12px;border:1px solid rgba(26,43,76,.08);margin-bottom:12px;'>
+        <div style='overflow-x:auto;border-radius:12px;border:1px solid rgba(26,43,76,.08);margin-bottom:16px;'>
         <table style='width:100%;border-collapse:collapse;font-family:DM Sans,sans-serif;'>
           <thead><tr style='background:linear-gradient(135deg,#38C9C0,#2756D6);'>
             {"".join(f'<th style="padding:10px 12px;color:white;font-family:Sora,sans-serif;font-size:12px;text-align:left;">{h}</th>' for h in ["#","Ad Soyad","Doğum","Rapor Bitiş","Tanı","Modüller"])}
@@ -94,14 +91,37 @@ def show():
           <tbody style='background:white;'>{rows_html}</tbody>
         </table></div>""", unsafe_allow_html=True)
 
-        st.markdown("#### ✏️ Öğrenci Düzenle / Sil")
-        secili_id = st.session_state.get("duzenle_id")
-        for s in filtered:
-            renk, etiket = rapor_durumu(s.get("rapor_bitis"))
-            baslik = f"{renk} {s['name']}"
-            if etiket:
-                baslik += f"  ·  {etiket}"
-            with st.expander(baslik, expanded=(secili_id == s["id"])):
+        # ── Düzenle / Sil ─────────────────────────────────────────────────────
+        s_map = {s["name"]: s for s in filtered}
+
+        def _on_secim():
+            lbl = st.session_state.get("duzenle_secim")
+            if lbl and lbl != "— Seçiniz —":
+                st.session_state["duzenle_id"] = s_map[lbl]["id"]
+            else:
+                st.session_state["duzenle_id"] = None
+
+        isim_listesi = [s["name"] for s in filtered]
+        secili_id    = st.session_state.get("duzenle_id")
+        secili_isim  = next((s["name"] for s in filtered if s["id"] == secili_id), None)
+
+        st.selectbox(
+            "✏️ Düzenlemek istediğiniz öğrenciyi seçin",
+            ["— Seçiniz —"] + isim_listesi,
+            index=(isim_listesi.index(secili_isim) + 1) if secili_isim in isim_listesi else 0,
+            key="duzenle_secim",
+            on_change=_on_secim,
+        )
+
+        if secili_id:
+            s = next((x for x in filtered if x["id"] == secili_id), None)
+            if s:
+                renk, etiket = rapor_durumu(s.get("rapor_bitis"))
+                st.markdown(
+                    f"<div style='background:white;border-radius:14px;border:1px solid rgba(26,43,76,.08);"
+                    f"padding:20px;margin-top:8px;'>",
+                    unsafe_allow_html=True,
+                )
                 with st.form(f"edit_{s['id']}"):
                     fc1, fc2, fc3 = st.columns(3)
                     with fc1:
@@ -145,6 +165,7 @@ def show():
                             if api.delete_student(s["id"]):
                                 st.session_state["duzenle_id"] = None
                                 st.rerun()
+                st.markdown("</div>", unsafe_allow_html=True)
 
     st.divider()
 
