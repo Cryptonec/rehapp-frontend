@@ -94,14 +94,14 @@ def show():
           <tbody style='background:white;'>{rows_html}</tbody>
         </table></div>""", unsafe_allow_html=True)
 
-        with st.expander("✏️ Öğrenci Düzenle / Sil", expanded=False):
-          for s in filtered:
+        st.markdown("#### ✏️ Öğrenci Düzenle / Sil")
+        secili_id = st.session_state.get("duzenle_id")
+        for s in filtered:
             renk, etiket = rapor_durumu(s.get("rapor_bitis"))
             baslik = f"{renk} {s['name']}"
             if etiket:
                 baslik += f"  ·  {etiket}"
-            with st.expander(baslik, expanded=False):
-
+            with st.expander(baslik, expanded=(secili_id == s["id"])):
                 with st.form(f"edit_{s['id']}"):
                     fc1, fc2, fc3 = st.columns(3)
                     with fc1:
@@ -116,7 +116,6 @@ def show():
                             "Rapor bitiş",
                             value=date.fromisoformat(s["rapor_bitis"]) if s.get("rapor_bitis") else None,
                         )
-
                     sel_diags = st.multiselect(
                         "Tanılar",
                         options=list(diag_map.keys()),
@@ -127,7 +126,6 @@ def show():
                         options=list(mod_map.keys()),
                         default=[m["name"] for m in s.get("modules", [])],
                     )
-
                     btn1, btn2 = st.columns([3, 1])
                     with btn1:
                         if st.form_submit_button("💾 Güncelle", type="primary", use_container_width=True):
@@ -139,11 +137,13 @@ def show():
                                 "module_ids": [mod_map[x] for x in sel_mods],
                             }
                             if api.update_student(s["id"], payload):
+                                st.session_state["duzenle_id"] = None
                                 st.success("Güncellendi!")
                                 st.rerun()
                     with btn2:
                         if st.form_submit_button("🗑 Sil", use_container_width=True):
                             if api.delete_student(s["id"]):
+                                st.session_state["duzenle_id"] = None
                                 st.rerun()
 
     st.divider()

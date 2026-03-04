@@ -668,13 +668,13 @@ def login_sayfasi():
                 sifre = st.text_input("Şifre", type="password", placeholder="••••••••")
                 st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
                 submitted = st.form_submit_button("Giriş Yap →", use_container_width=True, type="primary")
-            if submitted:
-                if not email.strip() or not sifre:
-                    st.error("E-posta ve şifre boş olamaz.")
-                else:
-                    st.session_state["login_loading"] = True
-                    st.session_state["_login_email"] = email.strip()
-                    st.session_state["_login_sifre"] = sifre
+                if submitted:
+                    if not email.strip() or not sifre:
+                        st.error("E-posta ve şifre boş olamaz.")
+                    else:
+                        st.session_state["login_loading"] = True
+                        st.session_state["_login_email"] = email.strip()
+                        st.session_state["_login_sifre"] = sifre
                     st.rerun()
     else:
         with st.form("register_form", clear_on_submit=True):
