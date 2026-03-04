@@ -514,29 +514,14 @@ def login_sayfasi():
     st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
 
     if mod == "Giriş Yap":
-        with st.form("login_form", clear_on_submit=False):
-            email = st.text_input("E-posta", placeholder="ornek@kurum.com")
-            sifre = st.text_input("Şifre", type="password", placeholder="••••••••")
-            st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
-            submitted = st.form_submit_button("Giriş Yap →", use_container_width=True, type="primary")
-
-        if submitted:
-            if not email.strip() or not sifre:
-                st.error("E-posta ve şifre boş olamaz.")
-            else:
-                st.session_state["login_loading"] = True
-                st.session_state["_login_email"] = email.strip()
-                st.session_state["_login_sifre"] = sifre
-                st.rerun()
-
         if st.session_state.get("login_loading"):
             st.markdown("""
             <style>
-            @keyframes lb-bounce{0%,100%{transform:translateY(0)}40%{transform:translateY(-16px)}65%{transform:translateY(-7px)}}
-            .login-balls{display:flex;gap:12px;justify-content:center;padding:20px 0;}
-            .lb1{width:15px;height:15px;border-radius:50%;background:#2756D6;animation:lb-bounce .65s ease-in-out infinite;}
-            .lb2{width:15px;height:15px;border-radius:50%;background:#38C9C0;animation:lb-bounce .65s ease-in-out .15s infinite;}
-            .lb3{width:15px;height:15px;border-radius:50%;background:#F5883A;animation:lb-bounce .65s ease-in-out .3s infinite;}
+            @keyframes lb-bounce{0%,100%{transform:translateY(0)}40%{transform:translateY(-18px)}65%{transform:translateY(-8px)}}
+            .login-balls{display:flex;gap:14px;justify-content:center;padding:48px 0;}
+            .lb1{width:16px;height:16px;border-radius:50%;background:#2756D6;animation:lb-bounce .65s ease-in-out infinite;}
+            .lb2{width:16px;height:16px;border-radius:50%;background:#38C9C0;animation:lb-bounce .65s ease-in-out .15s infinite;}
+            .lb3{width:16px;height:16px;border-radius:50%;background:#F5883A;animation:lb-bounce .65s ease-in-out .3s infinite;}
             </style>
             <div class="login-balls">
               <div class="lb1"></div><div class="lb2"></div><div class="lb3"></div>
@@ -544,13 +529,26 @@ def login_sayfasi():
             data = api.login(st.session_state.get("_login_email",""), st.session_state.get("_login_sifre",""))
             st.session_state["login_loading"] = False
             if data and data.get("access_token"):
-                    st.session_state["token"]       = data["access_token"]
-                    st.session_state["kurum_id"]    = data.get("kurum_id")
-                    st.session_state["kurum_ad"]    = data.get("kurum_ad", "")
-                    st.session_state["kurum_email"] = email.strip()
-                    st.session_state["page"]        = "app"
+                st.session_state["token"]       = data["access_token"]
+                st.session_state["kurum_id"]    = data.get("kurum_id")
+                st.session_state["kurum_ad"]    = data.get("kurum_ad", "")
+                st.session_state["kurum_email"] = st.session_state.get("_login_email", "")
+                st.session_state["page"]        = "app"
+                st.rerun()
+        else:
+            with st.form("login_form", clear_on_submit=False):
+                email = st.text_input("E-posta", placeholder="ornek@kurum.com")
+                sifre = st.text_input("Şifre", type="password", placeholder="••••••••")
+                st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
+                submitted = st.form_submit_button("Giriş Yap →", use_container_width=True, type="primary")
+            if submitted:
+                if not email.strip() or not sifre:
+                    st.error("E-posta ve şifre boş olamaz.")
+                else:
+                    st.session_state["login_loading"] = True
+                    st.session_state["_login_email"] = email.strip()
+                    st.session_state["_login_sifre"] = sifre
                     st.rerun()
-                # api.login zaten st.error gösteriyor hata durumunda
     else:
         with st.form("register_form", clear_on_submit=True):
             k_ad    = st.text_input("Kurum Adı", placeholder="Umut Özel Eğitim Merkezi")
