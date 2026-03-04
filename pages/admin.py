@@ -1,18 +1,17 @@
 """
 Admin Paneli — sadece necmettinakgun@gmail.com görebilir.
-Üyelik onayı, son giriş zamanı, pasif yapma.
 """
 import streamlit as st
 import api_client as api
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 def sor_son_giris(tarih_str):
     if not tarih_str:
         return "–"
     try:
-        dt = datetime.fromisoformat(tarih_str.replace("Z",""))
-        fark = datetime.now() - dt
+        dt = datetime.fromisoformat(tarih_str.replace("Z", "+00:00"))
+        fark = datetime.now(timezone.utc) - dt
         g = fark.days
         s = fark.seconds // 3600
         if g == 0 and s == 0: return "Az önce"
@@ -37,43 +36,61 @@ def show():
         st.info("Kurum bulunamadı.")
         return
 
-    def kurum_id(kurum):
+    def kid(k):
         for key in ("id", "kurum_id", "institution_id", "user_id"):
-            if kurum.get(key) is not None:
-                return kurum.get(key)
+            if k.get(key) is not None:
+                return k.get(key)
         return None
 
-    def kurum_ad(kurum):
-        return kurum.get("ad") or kurum.get("name") or "İsimsiz Kurum"
+    def kad(k):
+        return k.get("ad") or k.get("name") or "İsimsiz Kurum"
 
-    def kurum_email(kurum):
-        return kurum.get("email") or kurum.get("mail") or "-"
+    def kemail(k):
+        return k.get("email") or k.get("mail") or "-"
 
-    def onaylandi_mi(kurum):
-        if "onaylandi" in kurum:
-            return bool(kurum.get("onaylandi"))
-        if "onayli" in kurum:
-            return bool(kurum.get("onayli"))
-        if "approved" in kurum:
-            return bool(kurum.get("approved"))
-        # Eski backend'lerde sadece aktif alanı bulunabiliyor.
-        return bool(kurum.get("aktif"))
+    def onaylandi_mi(k):
+        for f in ("onaylandi", "onayli", "approved", "aktif"):
+            if f in k:
+                return bool(k[f])
+        return False
 
-    def aktif_mi(kurum):
-        return bool(kurum.get("aktif", True))
+    def aktif_mi(k):
+        return bool(k.get("aktif", True))
 
     bekleyen = [k for k in kurumlar if not onaylandi_mi(k)]
-    aktif = [k for k in kurumlar if onaylandi_mi(k) and aktif_mi(k)]
-    pasif = [k for k in kurumlar if onaylandi_mi(k) and not aktif_mi(k)]
+    aktif    = [k for k in kurumlar if onaylandi_mi(k) and aktif_mi(k)]
+    pasif    = [k for k in kurumlar if onaylandi_mi(k) and not aktif_mi(k)]
 
     m1, m2, m3, m4 = st.columns(4)
-    m1.metric("Toplam Kurum", len(kurumlar))
+    m1.metric("Toplam", len(kurumlar))
     m2.metric("Aktif", len(aktif))
-    m3.metric("Onay Bekleyen", len(bekleyen), delta=f"+{len(bekleyen)}" if bekleyen else None,
+    m3.metric("Onay Bekleyen", len(bekleyen),
+              delta=f"+{len(bekleyen)}" if bekleyen else None,
               delta_color="inverse" if bekleyen else "off")
     m4.metric("Pasif", len(pasif))
 
     st.divider()
+
+    # ── Silme onay dialogu ────────────────────────────────────────────────────
+    if "sil_id" not in st.session_state:
+        st.session_state["sil_id"] = None
+
+    if st.session_state["sil_id"]:
+        sil_id = st.session_state["sil_id"]
+        sil_ad = st.session_state.get("sil_ad", "")
+        st.warning(f"⚠️ **{sil_ad}** kurumunu silmek istediğinizden emin misiniz? Bu işlem **geri alınamaz.**")
+        c1, c2 = st.columns(2)
+        if c1.button("🗑️ Evet, Kalıcı Olarak Sil", type="primary", use_container_width=True):
+            if api.admin_sil_kurum(sil_id):
+                st.success("Kurum silindi.")
+            else:
+                st.error("Silme başarısız.")
+            st.session_state["sil_id"] = None
+            st.rerun()
+        if c2.button("İptal", use_container_width=True):
+            st.session_state["sil_id"] = None
+            st.rerun()
+        st.divider()
 
     # ── Onay Bekleyenler ──────────────────────────────────────────────────────
     if bekleyen:
@@ -86,23 +103,27 @@ def show():
         </div>""", unsafe_allow_html=True)
 
         for k in bekleyen:
-            kid = kurum_id(k)
-            with st.expander(f"⏳ {kurum_ad(k)}  ·  {kurum_email(k)}"):
+            _id = kid(k)
+            with st.expander(f"⏳ {kad(k)}  ·  {kemail(k)}"):
                 c1, c2, c3 = st.columns(3)
-                c1.markdown(f"**E-posta**  \n{kurum_email(k)}")
+                c1.markdown(f"**E-posta**  \n{kemail(k)}")
                 c2.markdown(f"**Kayıt**  \n{k.get('created_at','')[:10]}")
                 c3.markdown(f"**Öğrenci**  \n{k.get('ogrenci_sayisi', 0)}")
-                if kid is None:
-                    st.warning("Bu kayıtta kurum id bulunamadığı için işlem yapılamıyor.")
+                if _id is None:
+                    st.warning("Kurum id bulunamadı.")
                     continue
-                b1, b2 = st.columns(2)
-                if b1.button("✅ Onayla", key=f"onayla_{kid}", type="primary", use_container_width=True):
-                    if api.admin_onayla(kid):
+                b1, b2, b3 = st.columns(3)
+                if b1.button("✅ Onayla", key=f"onayla_{_id}", type="primary", use_container_width=True):
+                    if api.admin_onayla(_id):
                         st.success("Onaylandı!")
                         st.rerun()
-                if b2.button("✉️ Resend", key=f"resend_{kid}", use_container_width=True):
-                    if api.admin_resend_onay_mail(kid):
-                        st.success("Resend talebi gönderildi.")
+                if b2.button("✉️ Mail", key=f"resend_{_id}", use_container_width=True):
+                    if api.admin_resend_onay_mail(_id):
+                        st.success("Mail gönderildi.")
+                if b3.button("🗑️ Sil", key=f"sil_b_{_id}", use_container_width=True):
+                    st.session_state["sil_id"] = _id
+                    st.session_state["sil_ad"] = kad(k)
+                    st.rerun()
 
     # ── Aktif Kurumlar ────────────────────────────────────────────────────────
     st.markdown("""
@@ -111,24 +132,27 @@ def show():
     unsafe_allow_html=True)
 
     for k in aktif:
-        sg = sor_son_giris(k.get("son_giris"))
-        kid = kurum_id(k)
-        with st.expander(f"✅ {kurum_ad(k)}  ·  Son giriş: {sg}"):
+        sg  = sor_son_giris(k.get("son_giris"))
+        _id = kid(k)
+        with st.expander(f"✅ {kad(k)}  ·  Son giriş: {sg}"):
             c1, c2, c3, c4 = st.columns(4)
-            c1.markdown(f"**E-posta**  \n{kurum_email(k)}")
+            c1.markdown(f"**E-posta**  \n{kemail(k)}")
             c2.markdown(f"**Kayıt**  \n{k.get('created_at','')[:10]}")
             c3.markdown(f"**Öğrenci**  \n{k.get('ogrenci_sayisi', 0)}")
             c4.markdown(f"**Son giriş**  \n{sg}")
-
-            if kid is None:
-                st.warning("Bu kayıtta kurum id bulunamadığı için pasif işlemi yapılamıyor.")
+            if _id is None:
                 continue
-
-            if st.button("🚫 Pasif Yap", key=f"pasif_{kid}"):
-                if api.admin_pasif(kid):
+            b1, b2 = st.columns(2)
+            if b1.button("🚫 Pasif Yap", key=f"pasif_{_id}", use_container_width=True):
+                if api.admin_pasif(_id):
                     st.warning("Pasif yapıldı.")
                     st.rerun()
+            if b2.button("🗑️ Sil", key=f"sil_a_{_id}", use_container_width=True):
+                st.session_state["sil_id"] = _id
+                st.session_state["sil_ad"] = kad(k)
+                st.rerun()
 
+    # ── Pasif Kurumlar ────────────────────────────────────────────────────────
     if pasif:
         st.markdown("""
         <div style='font-family:Sora,sans-serif;font-weight:700;font-size:15px;
@@ -136,8 +160,15 @@ def show():
         unsafe_allow_html=True)
 
         for k in pasif:
-            with st.expander(f"🚫 {kurum_ad(k)}  ·  {kurum_email(k)}"):
+            _id = kid(k)
+            with st.expander(f"🚫 {kad(k)}  ·  {kemail(k)}"):
                 c1, c2, c3 = st.columns(3)
-                c1.markdown(f"**E-posta**  \n{kurum_email(k)}")
+                c1.markdown(f"**E-posta**  \n{kemail(k)}")
                 c2.markdown(f"**Kayıt**  \n{k.get('created_at','')[:10]}")
                 c3.markdown(f"**Öğrenci**  \n{k.get('ogrenci_sayisi', 0)}")
+                if _id is None:
+                    continue
+                if st.button("🗑️ Sil", key=f"sil_p_{_id}", use_container_width=True):
+                    st.session_state["sil_id"] = _id
+                    st.session_state["sil_ad"] = kad(k)
+                    st.rerun()

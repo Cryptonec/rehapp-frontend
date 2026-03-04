@@ -92,7 +92,6 @@ def admin_get_kurumlar():
         f"{API_URL}/api/admin/kurumlar/",
         f"{API_URL}/api/admin/institutions",
     ]
-
     for url in candidates:
         resp = requests.get(url, headers=_headers())
         if resp.status_code == 404:
@@ -108,7 +107,6 @@ def admin_get_kurumlar():
                     return data.get(key)
         st.error("Kurum listesi yanıt formatı beklenenden farklı.")
         return []
-
     st.error("Kurum listesi endpoint'i bulunamadı.")
     return []
 
@@ -119,23 +117,11 @@ def admin_pasif(kurum_id):
     return _handle(requests.post(f"{API_URL}/api/admin/kurumlar/{kurum_id}/pasif", headers=_headers()))
 
 def admin_resend_onay_mail(kurum_id):
-    return _handle(requests.post(
-        f"{API_URL}/api/admin/kurumlar/{kurum_id}/onayla",
-        headers=_headers()
-    ))
+    return _handle(requests.post(f"{API_URL}/api/admin/kurumlar/{kurum_id}/onayla", headers=_headers()))
 
-    last_error = None
-    for url in candidates:
-        resp = requests.post(url, headers=_headers())
-        if resp.status_code == 404:
-            continue
-        if 200 <= resp.status_code < 300:
-            return resp.json() if resp.content else {"ok": True}
-        last_error = resp
-        break
-
-    if last_error is not None:
-        _handle(last_error)
-    else:
-        st.error("Resend entegrasyonu için uygun endpoint bulunamadı.")
-    return None
+def admin_sil_kurum(kurum_id):
+    try:
+        r = requests.delete(f"{API_URL}/api/admin/kurumlar/{kurum_id}", headers=_headers())
+        return r.status_code == 200
+    except Exception:
+        return False
