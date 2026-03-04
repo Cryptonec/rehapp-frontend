@@ -22,6 +22,13 @@ params = st.query_params
 if params.get("p") == "login" and not st.session_state.get("token"):
     st.session_state["page"] = "login"
     st.query_params.clear()
+if params.get("p") == "reset" and params.get("token"):
+    st.session_state["page"] = "reset"
+    st.session_state["reset_token"] = params.get("token")
+    st.query_params.clear()
+if params.get("p") == "forgot" and not st.session_state.get("token"):
+    st.session_state["page"] = "forgot"
+    st.query_params.clear()
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -247,9 +254,9 @@ div[data-testid="collapsedControl"]{display:none!important;}
   <div class="hero-inner">
     <div class="hero-logo-mark fade-1" style="display:flex;flex-direction:column;align-items:center;margin-bottom:28px;">
       <div style="display:flex;gap:10px;justify-content:center;margin-bottom:8px;">
-        <div class="logo-dot d1" style="width:14px;height:14px;border-radius:50%;background:#2756D6;"></div>
-        <div class="logo-dot d2" style="width:14px;height:14px;border-radius:50%;background:#38C9C0;"></div>
-        <div class="logo-dot d3" style="width:14px;height:14px;border-radius:50%;background:#F5883A;"></div>
+        <div class="logo-dot d1" style="width:18px;height:18px;border-radius:50%;background:#2756D6;"></div>
+        <div class="logo-dot d2" style="width:18px;height:18px;border-radius:50%;background:#38C9C0;"></div>
+        <div class="logo-dot d3" style="width:18px;height:18px;border-radius:50%;background:#F5883A;"></div>
       </div>
       <div style="font-family:Sora,sans-serif;font-size:clamp(28px,4vw,40px);font-weight:800;letter-spacing:-1.5px;line-height:1;">
         <span style="color:#0D1B35;">Reh</span><span style="color:#38C9C0;">app</span>
@@ -432,6 +439,112 @@ div[data-testid="collapsedControl"]{display:none!important;}
 # ══════════════════════════════════════════════════════════════════════════════
 # LOGIN / KAYIT SAYFASI
 # ══════════════════════════════════════════════════════════════════════════════
+
+def sifremi_unuttum_sayfasi():
+    import api_client as api
+    st.markdown("""
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&display=swap');
+    html,body,[class*="css"]{font-family:'Plus Jakarta Sans',sans-serif!important;}
+    .stApp{background:linear-gradient(145deg,#EBF2FF 0%,#E8F6F5 50%,#F0F4FA 100%)!important;min-height:100vh;}
+    #MainMenu,footer,header,[data-testid="stToolbar"],[data-testid="stSidebar"],
+    [data-testid="stHeader"],div[data-testid="collapsedControl"],button[kind="header"]{display:none!important;}
+    .block-container{max-width:420px!important;padding:0 1.25rem!important;margin:0 auto!important;}
+    [data-baseweb="input"]>div{border-radius:12px!important;border:1.5px solid rgba(13,27,53,.12)!important;background:white!important;}
+    </style>""", unsafe_allow_html=True)
+
+    st.markdown("<div style='height:48px'></div>", unsafe_allow_html=True)
+    st.markdown("""
+    <div style='text-align:center;margin-bottom:28px;'>
+      <div style='font-family:Sora,sans-serif;font-size:28px;font-weight:800;color:#1A2B4C;'>
+        Reh<span style='color:#38C9C0;'>app</span>
+      </div>
+      <div style='font-size:14px;color:#6B7A99;margin-top:8px;'>Şifre sıfırlama bağlantısı gönderilecek</div>
+    </div>""", unsafe_allow_html=True)
+
+    with st.form("forgot_form"):
+        email = st.text_input("E-posta adresiniz", placeholder="ornek@kurum.com")
+        submitted = st.form_submit_button("📧 Sıfırlama Bağlantısı Gönder", use_container_width=True, type="primary")
+
+    if submitted:
+        if not email.strip():
+            st.error("E-posta adresi boş olamaz.")
+        else:
+            try:
+                import requests, os
+                r = requests.post(
+                    f"{os.environ.get('API_URL','http://localhost:8000')}/api/sifre-sifirla-talep",
+                    json={"email": email.strip().lower()}
+                )
+                st.success("✅ E-posta adresinize sıfırlama bağlantısı gönderdik. Lütfen gelen kutunuzu kontrol edin.")
+            except:
+                st.error("Bir hata oluştu, lütfen tekrar deneyin.")
+
+    st.markdown("""
+    <div style='text-align:center;margin-top:16px;'>
+      <a href='?p=login' target='_self'
+         style='font-family:Sora,sans-serif;font-size:13px;color:#6B7A99;text-decoration:none;'>
+        ← Giriş sayfasına dön
+      </a>
+    </div>""", unsafe_allow_html=True)
+
+
+def sifre_sifirla_sayfasi():
+    import api_client as api
+    st.markdown("""
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&display=swap');
+    html,body,[class*="css"]{font-family:'Plus Jakarta Sans',sans-serif!important;}
+    .stApp{background:linear-gradient(145deg,#EBF2FF 0%,#E8F6F5 50%,#F0F4FA 100%)!important;min-height:100vh;}
+    #MainMenu,footer,header,[data-testid="stToolbar"],[data-testid="stSidebar"],
+    [data-testid="stHeader"],div[data-testid="collapsedControl"],button[kind="header"]{display:none!important;}
+    .block-container{max-width:420px!important;padding:0 1.25rem!important;margin:0 auto!important;}
+    [data-baseweb="input"]>div{border-radius:12px!important;border:1.5px solid rgba(13,27,53,.12)!important;background:white!important;}
+    </style>""", unsafe_allow_html=True)
+
+    token = st.session_state.get("reset_token", "")
+    if not token:
+        st.error("Geçersiz sıfırlama bağlantısı.")
+        return
+
+    st.markdown("<div style='height:48px'></div>", unsafe_allow_html=True)
+    st.markdown("""
+    <div style='text-align:center;margin-bottom:28px;'>
+      <div style='font-family:Sora,sans-serif;font-size:28px;font-weight:800;color:#1A2B4C;'>
+        Reh<span style='color:#38C9C0;'>app</span>
+      </div>
+      <div style='font-size:14px;color:#6B7A99;margin-top:8px;'>Yeni şifrenizi belirleyin</div>
+    </div>""", unsafe_allow_html=True)
+
+    with st.form("reset_form"):
+        yeni    = st.text_input("Yeni şifre", type="password", placeholder="En az 6 karakter")
+        tekrar  = st.text_input("Şifre tekrar", type="password", placeholder="Şifreyi tekrar girin")
+        submitted = st.form_submit_button("🔐 Şifremi Güncelle", use_container_width=True, type="primary")
+
+    if submitted:
+        if not yeni or len(yeni) < 6:
+            st.error("Şifre en az 6 karakter olmalı.")
+        elif yeni != tekrar:
+            st.error("Şifreler eşleşmiyor.")
+        else:
+            try:
+                import requests, os
+                r = requests.post(
+                    f"{os.environ.get('API_URL','http://localhost:8000')}/api/sifre-sifirla",
+                    json={"token": token, "sifre": yeni}
+                )
+                if r.status_code == 200:
+                    st.success("✅ Şifreniz güncellendi! Giriş yapabilirsiniz.")
+                    st.session_state["reset_token"] = None
+                    st.session_state["page"] = "login"
+                    import time; time.sleep(1.5)
+                    st.rerun()
+                else:
+                    st.error(r.json().get("detail", "Bir hata oluştu."))
+            except:
+                st.error("Bir hata oluştu, lütfen tekrar deneyin.")
+
+
 def login_sayfasi():
     # Token varsa zaten giriş yapılmış — ana uygulamaya git
     if st.session_state.get("token") and st.session_state.get("kurum_id"):
@@ -603,8 +716,12 @@ if not _token or not _kurum_id:
     if _token and not _kurum_id:
         st.session_state.clear()
         st.query_params.clear()
-    # Login veya landing göster, sonra HARD STOP
-    if current_page == "login":
+    # Forgot / Reset / Login / Landing
+    if current_page == "forgot":
+        sifremi_unuttum_sayfasi()
+    elif current_page == "reset":
+        sifre_sifirla_sayfasi()
+    elif current_page == "login":
         login_sayfasi()
     else:
         landing_sayfasi()
