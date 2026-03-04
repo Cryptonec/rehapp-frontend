@@ -256,47 +256,32 @@ def show():
             aday_lst.append(lbl)
             aday_map[lbl] = isim
 
-        st.markdown(f"<div style='font-family:Sora,sans-serif;font-size:13px;font-weight:600;color:#6B7A99;margin-bottom:8px;'>{etiket_lbl}</div>", unsafe_allow_html=True)
-
         if not aday_lst and grup:
             st.info("Bu gruba eklenebilecek uyumlu öğrenci bulunamadı.")
         else:
-            # Arama kutusu
-            arama = st.text_input("", placeholder="🔍 İsme göre filtrele...", key=f"srch_arama_{len(grup)}", label_visibility="collapsed")
-            filtreli = [l for l in aday_lst if arama.lower() in l.lower()] if arama else aday_lst
-
-            st.markdown("""<style>
-            div[data-testid="stButton"] button.aday-btn{
-              background:white!important;border:1.5px solid rgba(13,27,53,.1)!important;
-              border-radius:10px!important;padding:10px 16px!important;width:100%!important;
-              text-align:left!important;font-family:'Plus Jakarta Sans',sans-serif!important;
-              font-size:14px!important;color:#1A2B4C!important;transition:all .15s!important;
-              min-height:44px!important;}
-            div[data-testid="stButton"] button.aday-btn:hover{
-              border-color:#38C9C0!important;background:rgba(56,201,192,.05)!important;
-              transform:translateX(3px)!important;}
-            </style>""", unsafe_allow_html=True)
-
-            for lbl in filtreli[:30]:
+            def _on_secim():
+                lbl = st.session_state.get(f"srch_select_{len(grup)}")
+                if not lbl or lbl == "— Seçiniz —":
+                    return
                 isim = aday_map.get(lbl, lbl)
-                s = s_map.get(isim, {})
-                sid = s.get("id")
-                renk = rapor_renk(s.get("rapor_bitis"))
-                dot = f'<span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:{renk};margin-right:8px;vertical-align:middle;"></span>'
-                if st.button(lbl, key=f"aday_{sid}_{len(grup)}", use_container_width=True):
-                    st.session_state["srch_grup_uyeleri"].append({
-                        "id":          sid,
-                        "name":        isim,
-                        "dob":         s.get("dob"),
-                        "rapor_bitis": s.get("rapor_bitis"),
-                        "mod_adlari":  sorted(mods_by_id.get(sid, frozenset())),
-                        "diag_adlari": sorted(diags_by_id.get(sid, frozenset())),
-                    })
-                    st.session_state["grup_loading"] = True
-                    st.rerun()
+                s    = s_map.get(isim, {})
+                sid  = s.get("id")
+                st.session_state["srch_grup_uyeleri"].append({
+                    "id":          sid,
+                    "name":        isim,
+                    "dob":         s.get("dob"),
+                    "rapor_bitis": s.get("rapor_bitis"),
+                    "mod_adlari":  sorted(mods_by_id.get(sid, frozenset())),
+                    "diag_adlari": sorted(diags_by_id.get(sid, frozenset())),
+                })
+                st.session_state["grup_loading"] = True
 
-            if len(filtreli) > 30:
-                st.caption(f"{len(filtreli) - 30} öğrenci daha var, aramayı daraltın.")
+            st.selectbox(
+                etiket_lbl,
+                ["— Seçiniz —"] + aday_lst,
+                key=f"srch_select_{len(grup)}",
+                on_change=_on_secim,
+            )
 
     # ── Özet + Kaydet ─────────────────────────────────────────────────────────
     if len(grup) >= 2:
