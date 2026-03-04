@@ -684,10 +684,9 @@ hr{border-color:rgba(13,27,53,.08)!important;margin:16px 0!important;}
 st.markdown('''
 <style>
 @keyframes rh-in{from{opacity:0;transform:scale(0) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
-@keyframes rh-bounce{0%,100%{transform:translateY(0)}40%{transform:translateY(-10px)}65%{transform:translateY(-4px)}}
-.rh-d1{background:#2756D6;animation:rh-in .35s cubic-bezier(.34,1.56,.64,1) .05s both,rh-bounce .65s ease-in-out .8s 3}
-.rh-d2{background:#38C9C0;animation:rh-in .35s cubic-bezier(.34,1.56,.64,1) .18s both,rh-bounce .65s ease-in-out .95s 3}
-.rh-d3{background:#F5883A;animation:rh-in .35s cubic-bezier(.34,1.56,.64,1) .31s both,rh-bounce .65s ease-in-out 1.1s 3}
+.rh-d1{background:#2756D6;animation:rh-in .35s cubic-bezier(.34,1.56,.64,1) .05s both}
+.rh-d2{background:#38C9C0;animation:rh-in .35s cubic-bezier(.34,1.56,.64,1) .18s both}
+.rh-d3{background:#F5883A;animation:rh-in .35s cubic-bezier(.34,1.56,.64,1) .31s both}
 </style>
 <div style="padding:8px 0 0 0;display:flex;align-items:center;justify-content:flex-start;">
   <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;">
