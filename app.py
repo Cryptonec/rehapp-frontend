@@ -510,14 +510,6 @@ def login_sayfasi():
 
     st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
 
-   [data-testid="stRadio"]>div{background:rgba(13,27,53,.06)!important;border-radius:50px!important;padding:5px!important;display:flex!important;}
-[data-testid="stRadio"] label{border-radius:50px!important;font-family:'Sora',sans-serif!important;
-  font-size:15px!important;font-weight:600!important;padding:11px 32px!important;
-  flex:1!important;text-align:center!important;transition:all .25s!important;color:#6B7A99!important;}
-[data-testid="stRadio"] label:has(input:checked){
-  background:linear-gradient(135deg,#38C9C0,#2756D6)!important;color:white!important;
-  box-shadow:0 6px 16px rgba(56,201,192,.35)!important;}
-[data-testid="stRadio"] [data-baseweb="radio"]>div:first-child{display:none!important;}
     st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
 
     if mod == "Giriş Yap":
