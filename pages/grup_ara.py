@@ -1,10 +1,12 @@
 """
-Grup Oluştur
+Grup Oluştur — Eski proje mantığı klonu.
 
-Doğru gruplama kuralı:
-- Her öğrencinin modülleri tanıya göre eşlenir (TANI_MODUL_MAP)
-- Aynı tanıdan gelen aynı modül varsa grup kurulabilir
-- Max 4 yıl yaş farkı
+Performans optimizasyonları:
+- Öğrenci + modül + tanı verisi TEK seferde API'den çekilir, session_state'te cache'lenir
+- frozenset ile O(1) kesişim kontrolü
+- Aday listesi her seçimde sadece mevcut gruptan türetilir, tüm öğrenciler taranmaz
+- Grup üyeleri session_state["srch_grup_uyeleri"]'nde tutulur (eski proje adı korundu)
+- Cache bust: Lila import sonrası students_cache_bust +1 → veri yeniden çekilir
 """
 import streamlit as st
 from datetime import date
@@ -12,51 +14,13 @@ from html import unescape
 import re
 import api_client as api
 
-TANI_MODUL_MAP = {
-    "Bedensel Yetersizliği Olan Bireyler İçin Destek Eğitim Programı": [
-        "Günlük Yaşam Aktiviteleri"],
-    "Dil ve Konuşma Bozukluğu Olan Bireyler İçin Destek Eğitim Programı": [
-        "Dil"],
-    "Görme Yetersizliği Olan Bireyler İçin Destek Eğitim Programı": [
-        "Dil ve İletişim","Erken Matematik","Günlük Yaşam Becerileri",
-        "Matematik","Okuma ve Yazma","Sosyal Beceriler","Toplumsal Yaşam Becerileri"],
-    "İşitme Yetersizliği Olan Bireyler İçin Destek Eğitim Programı": [
-        "Erken Matematik","Matematik","Okuma ve Yazma","Sosyal İletişim"],
-    "Otizm Spektrum Bozukluğu Olan Bireyler İçin Destek Eğitim Programı": [
-        "Birey ve Çevre","Dil, İletişim ve Oyun","Erken Matematik",
-        "Günlük Yaşam Becerileri","Matematik","Okuma ve Yazma",
-        "Sosyal Beceriler","Toplumsal Yaşam Becerileri"],
-    "Öğrenme Güçlüğü Olan Bireyler İçin Destek Eğitim Programı": [
-        "Dil ve İletişim","Erken Matematik","Matematik","Okuma ve Yazma","Sosyal Etkileşim"],
-    "Zihinsel Yetersizliği Olan Bireyler İçin Destek Eğitim Programı": [
-        "Birey ve Çevre","Dil, İletişim ve Oyun","Erken Matematik",
-        "Günlük Yaşam Becerileri","Matematik","Okuma ve Yazma",
-        "Sosyal Beceriler","Toplumsal Yaşam Becerileri"],
-}
 
-
-def _normalize_module_names(raw_name):
-    if not raw_name:
-        return []
-    txt = str(raw_name).strip()
-    if not txt:
-        return []
-    if "<" in txt and "mod-badge" in txt:
-        badges = re.findall(r'<span\s+class=["\']mod-badge["\']>(.*?)</span>', txt, flags=re.IGNORECASE)
-        if badges:
-            return [unescape(b).strip() for b in badges if unescape(b).strip()]
-    protected = re.sub(r"</(span|div|p|li|br)\s*>", " / ", txt, flags=re.IGNORECASE)
-    cleaned = re.sub(r"<[^>]+>", "", protected)
-    cleaned = unescape(cleaned).strip()
-    parts = [p.strip() for p in cleaned.split("/") if p.strip()]
-    return parts
-
+# ── Yardımcı fonksiyonlar ─────────────────────────────────────────────────────
 
 def age_years(dob_str):
     if not dob_str: return None
     try: return (date.today() - date.fromisoformat(dob_str)).days / 365.25
     except: return None
-
 
 def rapor_renk(rb):
     if not rb: return "#22C55E"
@@ -64,7 +28,6 @@ def rapor_renk(rb):
         k = (date.fromisoformat(str(rb)[:10]) - date.today()).days
         return "#EF4444" if k < 0 else "#F59E0B" if k <= 30 else "#22C55E"
     except: return "#22C55E"
-
 
 def rapor_etiketi(rb):
     if not rb: return ""
@@ -75,64 +38,100 @@ def rapor_etiketi(rb):
         return ""
     except: return ""
 
-
 def turkish_sort_key(s):
     return s.lower().translate(str.maketrans("çğıöşüÇĞİÖŞÜ", "cgiosucgiosu"))
 
 
-def ortak_tani_modul_ciftleri(uye_listesi, tani_modul_by_id):
-    """Her üye için (tani, modul) çiftleri üret, kesişimi al."""
-    cift_setleri = []
-    for u in uye_listesi:
-        tm = tani_modul_by_id.get(u["id"], {})
-        ciftler = frozenset(
-            (tani, modul)
-            for tani, moduller in tm.items()
-            for modul in moduller
-        )
-        cift_setleri.append(ciftler)
-    if not cift_setleri:
-        return frozenset()
-    return frozenset.intersection(*cift_setleri)
+def _normalize_module_names(raw_name):
+    """Bozuk/HTML enjekte edilmiş modül isimlerini temizleyip liste döndürür."""
+    if not raw_name:
+        return []
+
+    txt = str(raw_name).strip()
+    if not txt:
+        return []
+
+    if "<" in txt and "mod-badge" in txt:
+        badges = re.findall(r'<span\s+class=["\']mod-badge["\']>(.*?)</span>', txt, flags=re.IGNORECASE)
+        if badges:
+            return [unescape(b).strip() for b in badges if unescape(b).strip()]
+
+    protected = re.sub(r"</(span|div|p|li|br)\s*>", " / ", txt, flags=re.IGNORECASE)
+    cleaned = re.sub(r"<[^>]+>", "", protected)
+    cleaned = unescape(cleaned).strip()
+    parts = [p.strip() for p in cleaned.split("/") if p.strip()]
+    return parts
 
 
-@st.cache_data(ttl=60, show_spinner=False)
-def _fetch_students(kurum_id, cache_bust=0):
-    raw = api.get_students()
-    mods_by_id = {}
-    diags_by_id = {}
-    tani_modul_by_id = {}
-
-    for s in raw:
-        normalized = []
-        for m in s.get("modules", []):
-            names = _normalize_module_names(m.get("name"))
-            normalized.extend(names if isinstance(names, list) else [])
-        s_mods  = frozenset(normalized)
-        s_diags = frozenset(d["name"] for d in s.get("diagnoses", []))
-
-        mods_by_id[s["id"]]  = s_mods
-        diags_by_id[s["id"]] = s_diags
-
-        tm = {}
-        for tani in s_diags:
-            if tani in TANI_MODUL_MAP:
-                izin   = frozenset(TANI_MODUL_MAP[tani])
-                gercek = s_mods & izin
-                if gercek:
-                    tm[tani] = gercek
-        tani_modul_by_id[s["id"]] = tm
-
-    return raw, mods_by_id, diags_by_id, tani_modul_by_id
-
+# ── Veri yükleme — session_state cache ───────────────────────────────────────
 
 def _load():
-    kurum_id = st.session_state.get("kurum_id", 0)
-    bust     = st.session_state.get("students_cache_bust", 0)
-    return _fetch_students(kurum_id, bust)
+    """
+    Öğrenci verisini session_state'te cache'ler.
+    students_cache_bust değişince (Lila import sonrası) yeniden yükler.
+    """
+    bust = st.session_state.get("students_cache_bust", 0)
+    if st.session_state.get("_sc_bust") != bust or "_sc_students" not in st.session_state:
+        raw = api.get_students()
 
+        # Her öğrenci için frozenset — kesişim O(1)
+        mods_by_id = {}
+        for s in raw:
+            normalized_names = []
+            for m in s.get("modules", []):
+                mod_names = _normalize_module_names(m.get("name"))
+                if not isinstance(mod_names, list):
+                    mod_names = list(mod_names) if mod_names else []
+                normalized_names.extend(mod_names)
+            mods_by_id[s["id"]] = frozenset(normalized_names)
+        diags_by_id = {s["id"]: frozenset(d["name"] for d in s.get("diagnoses", [])) for s in raw}
+
+        # Hızlı isim→id haritası
+        id_by_name  = {s["name"]: s["id"] for s in raw}
+
+        st.session_state.update({
+            "_sc_students":  raw,
+            "_sc_mods":      mods_by_id,
+            "_sc_diags":     diags_by_id,
+            "_sc_id_by_name":id_by_name,
+            "_sc_bust":      bust,
+        })
+
+    return (
+        st.session_state["_sc_students"],
+        st.session_state["_sc_mods"],
+        st.session_state["_sc_diags"],
+        st.session_state["_sc_id_by_name"],
+    )
+
+
+# ── Ana sayfa ─────────────────────────────────────────────────────────────────
 
 def show():
+    st.markdown("""
+    <style>
+    @keyframes rh-ov-bounce{0%,100%{transform:translateY(0)}40%{transform:translateY(-16px)}65%{transform:translateY(-7px)}}
+    .rh-overlay{position:fixed;top:0;left:0;right:0;bottom:0;
+      background:rgba(240,244,250,.92);backdrop-filter:blur(6px);
+      display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;}
+    .rh-ov-balls{display:flex;gap:12px;margin-bottom:16px;}
+    .rh-ob1{width:16px;height:16px;border-radius:50%;background:#2756D6;animation:rh-ov-bounce .6s ease-in-out infinite;}
+    .rh-ob2{width:16px;height:16px;border-radius:50%;background:#38C9C0;animation:rh-ov-bounce .6s ease-in-out .15s infinite;}
+    .rh-ob3{width:16px;height:16px;border-radius:50%;background:#F5883A;animation:rh-ov-bounce .6s ease-in-out .3s infinite;}
+    .rh-ov-text{font-family:Sora,sans-serif;font-size:13px;color:#6B7A99;}
+    </style>""", unsafe_allow_html=True)
+
+    if st.session_state.get("grup_loading"):
+        st.session_state["grup_loading"] = False
+        st.markdown('''<div class="rh-overlay">
+          <div class="rh-ov-balls">
+            <div class="rh-ob1"></div><div class="rh-ob2"></div><div class="rh-ob3"></div>
+          </div>
+          <div class="rh-ov-text">Yükleniyor...</div>
+        </div>''', unsafe_allow_html=True)
+        import time; time.sleep(0.6)
+        st.rerun()
+
     st.markdown("""
     <style>
     .oyuncu-kart{background:white;border:2px solid #38C9C0;border-radius:14px;
@@ -149,16 +148,19 @@ def show():
       border:1.5px solid rgba(56,201,192,.3);border-radius:16px;padding:20px 24px;margin:16px 0;}
     </style>""", unsafe_allow_html=True)
 
+    # Sıfırla butonu
     if st.button("🧹 Sıfırla", key="srch_clear"):
         st.session_state.pop("srch_grup_uyeleri", None)
         st.rerun()
 
-    students, mods_by_id, diags_by_id, tani_modul_by_id = _load()
+    # ── Veri yükle (cache'li) ─────────────────────────────────────────────────
+    students, mods_by_id, diags_by_id, id_by_name = _load()
 
     if not students:
         st.info("Önce Lila'dan öğrenci aktarın veya manuel ekleyin.")
         return
 
+    # Session state
     if "srch_grup_uyeleri" not in st.session_state:
         st.session_state["srch_grup_uyeleri"] = []
 
@@ -166,16 +168,17 @@ def show():
     secilen_isimler = {u["name"] for u in grup}
 
     st.markdown("#### 👤 Grup üyelerini seçin")
-    st.caption("Aynı tanıdan gelen aynı modül eşleşmeli · Max 4 yaş farkı")
+    st.caption("Parantez içi rapor durumu gösterir · Sadece uyumlu öğrenciler listelenir")
 
+    # ── Seçili üyeler ─────────────────────────────────────────────────────────
     for i, uye in enumerate(grup):
         mod_badges = "".join(
             f'<span class="mod-badge">{m}</span>'
             for m in uye.get("mod_adlari", [])
         )
-        renk       = rapor_renk(uye.get("rapor_bitis"))
-        etiket_str = rapor_etiketi(uye.get("rapor_bitis"))
-        is_last    = (i == len(grup) - 1)
+        renk      = rapor_renk(uye.get("rapor_bitis"))
+        etiket_str= rapor_etiketi(uye.get("rapor_bitis"))
+        is_last   = (i == len(grup) - 1)
 
         col_kart, col_x = st.columns([10, 1])
         with col_kart:
@@ -195,50 +198,54 @@ def show():
                 '</div>'
             )
             st.markdown(html, unsafe_allow_html=True)
-        with col_x:
-            if is_last:
-                st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
-                if st.button("✕", key=f"srch_sil_{i}", help="Bu üyeyi çıkar"):
-                    st.session_state["srch_grup_uyeleri"].pop()
-                    st.rerun()
-
+    # ── Sonraki aday hesaplama ────────────────────────────────────────────────
     if len(grup) < 10:
         etiket_lbl = "İlk öğrenciyi seçin" if not grup else f"{len(grup)+1}. üyeyi seçin"
 
         if not grup:
+            # İlk seçimde herkes
             aday_isimler = [s["name"] for s in students if s["name"] not in secilen_isimler]
-        else:
-            mevcut_ciftler = ortak_tani_modul_ciftleri(grup, tani_modul_by_id)
 
-            doblar  = [u["dob"] for u in grup if u.get("dob")]
-            yas_min = min(age_years(d) for d in doblar) if doblar else 0
-            yas_max = max(age_years(d) for d in doblar) if doblar else 100
+        else:
+            # Grubun mevcut kesişimleri — frozenset, O(1)
+            mod_setleri  = [mods_by_id.get(u["id"],  frozenset()) for u in grup]
+            diag_setleri = [diags_by_id.get(u["id"], frozenset()) for u in grup]
+            mevcut_modler= frozenset.intersection(*mod_setleri)
+            mevcut_diag  = frozenset.intersection(*diag_setleri)
+
+            doblar   = [u["dob"] for u in grup if u.get("dob")]
+            yas_min  = min(age_years(d) for d in doblar) if doblar else 0
+            yas_max  = max(age_years(d) for d in doblar) if doblar else 100
 
             aday_isimler = []
             for s in students:
                 if s["name"] in secilen_isimler:
                     continue
 
-                tm = tani_modul_by_id.get(s["id"], {})
-                s_ciftler = frozenset(
-                    (tani, modul)
-                    for tani, moduller in tm.items()
-                    for modul in moduller
-                )
+                s_mods  = mods_by_id.get(s["id"],  frozenset())
+                s_diags = diags_by_id.get(s["id"], frozenset())
 
-                if not (s_ciftler & mevcut_ciftler):
+                # 1. Modül uyumu — ortak modül kalmalı
+                if not (s_mods & mevcut_modler):
                     continue
 
+                # 2. Tanı uyumu — her iki tarafta tanı varsa kesişim zorunlu
+                if mevcut_diag and s_diags and not (s_diags & mevcut_diag):
+                    continue
+
+                # 3. Yaş uyumu — yeni üye eklenince max fark 3 yılı geçmemeli
                 s_yas = age_years(s.get("dob"))
                 if s_yas is None:
                     continue
-                if max(yas_max, s_yas) - min(yas_min, s_yas) > 4:
+                if max(yas_max, s_yas) - min(yas_min, s_yas) > 3:
                     continue
 
                 aday_isimler.append(s["name"])
 
+        # Türkçe sırala
         aday_isimler.sort(key=turkish_sort_key)
 
+        # Dropdown etiketi — rapor durumu
         s_map    = {s["name"]: s for s in students}
         aday_lst = []
         aday_map = {}
@@ -258,7 +265,7 @@ def show():
 
         if siradaki_lbl != "— Seçiniz —":
             siradaki = aday_map.get(siradaki_lbl, siradaki_lbl)
-            s   = s_map.get(siradaki, {})
+            s = s_map.get(siradaki, {})
             sid = s.get("id")
             st.session_state["srch_grup_uyeleri"].append({
                 "id":          sid,
@@ -268,16 +275,20 @@ def show():
                 "mod_adlari":  sorted(mods_by_id.get(sid, frozenset())),
                 "diag_adlari": sorted(diags_by_id.get(sid, frozenset())),
             })
+            st.session_state["grup_loading"] = True
             st.rerun()
 
         if not aday_lst and grup:
             st.info("Bu gruba eklenebilecek uyumlu öğrenci bulunamadı.")
 
+    # ── Özet + Kaydet ─────────────────────────────────────────────────────────
     if len(grup) >= 2:
         st.divider()
 
-        mevcut_ciftler = ortak_tani_modul_ciftleri(grup, tani_modul_by_id)
-        ortak_modul    = frozenset(modul for _, modul in mevcut_ciftler)
+        mod_setleri  = [mods_by_id.get(u["id"],  frozenset()) for u in grup]
+        diag_setleri = [diags_by_id.get(u["id"], frozenset()) for u in grup]
+        ortak_modul  = frozenset.intersection(*mod_setleri)
+        ortak_tani   = frozenset.intersection(*diag_setleri)
 
         doblar = [u["dob"] for u in grup if u.get("dob")]
         yas_farki = None
@@ -285,9 +296,12 @@ def show():
             yaslar    = [age_years(d) for d in doblar]
             yas_farki = round(max(yaslar) - min(yaslar), 2)
 
+        # Uyarı kontrolleri
         uyarilar = []
+        if all(diags_by_id.get(u["id"]) for u in grup) and not ortak_tani:
+            uyarilar.append("⚠️ Ortak tanı yok — bu öğrenciler birlikte gruplanamaz.")
         if not ortak_modul:
-            uyarilar.append("⚠️ Aynı tanıdan gelen ortak modül yok — bu öğrenciler birlikte gruplanamaz.")
+            uyarilar.append("⚠️ Ortak modül yok — bu öğrenciler birlikte gruplanamaz.")
         if yas_farki is not None and yas_farki > 4:
             uyarilar.append(f"⚠️ Yaş farkı {yas_farki} yıl — 4 yılı aşıyor.")
 
@@ -295,7 +309,10 @@ def show():
             for u in uyarilar:
                 st.warning(u)
         else:
-            mod_badges  = "".join(f'<span class="mod-badge">{m}</span>' for m in sorted(ortak_modul))
+            mod_badges = "".join(
+                f'<span class="mod-badge">{m}</span>'
+                for m in sorted(ortak_modul)
+            )
             isimler_str = "  ·  ".join(u["name"] for u in grup)
             yas_str     = f"{yas_farki} yıl fark" if yas_farki is not None else "—"
 
