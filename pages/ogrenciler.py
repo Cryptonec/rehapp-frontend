@@ -64,21 +64,7 @@ def show():
     if not filtered:
         st.info("Öğrenci bulunamadı.")
     else:
-        # Tablo başlığı
-        st.markdown("""
-        <div style='overflow-x:auto;border-radius:12px;border:1px solid rgba(26,43,76,.08);margin-bottom:8px;'>
-        <table style='width:100%;border-collapse:collapse;font-family:DM Sans,sans-serif;'>
-          <thead><tr style='background:linear-gradient(135deg,#38C9C0,#2756D6);'>
-            <th style='padding:10px 12px;color:white;font-family:Sora,sans-serif;font-size:12px;text-align:left;'>#</th>
-            <th style='padding:10px 12px;color:white;font-family:Sora,sans-serif;font-size:12px;text-align:left;'>Ad Soyad</th>
-            <th style='padding:10px 12px;color:white;font-family:Sora,sans-serif;font-size:12px;text-align:left;'>Doğum</th>
-            <th style='padding:10px 12px;color:white;font-family:Sora,sans-serif;font-size:12px;text-align:left;'>Rapor Bitiş</th>
-            <th style='padding:10px 12px;color:white;font-family:Sora,sans-serif;font-size:12px;text-align:left;'>Tanı</th>
-            <th style='padding:10px 12px;color:white;font-family:Sora,sans-serif;font-size:12px;text-align:left;'>Modüller</th>
-          </tr></thead>
-          <tbody style='background:white;'>
-        """, unsafe_allow_html=True)
-
+        rows_html = ""
         for i, s in enumerate(filtered, 1):
             renk_emoji, etiket = rapor_durumu(s.get("rapor_bitis"))
             tani_kisa = " / ".join(
@@ -89,39 +75,32 @@ def show():
                 f'<span style="display:inline-block;background:rgba(56,201,192,.12);color:#2B7A76;border-radius:4px;padding:1px 7px;margin:2px;font-size:11px;">{m["name"]}</span>'
                 for m in s.get("modules", [])
             ) or "–"
-            rapor_str = s.get("rapor_bitis") or "–"
-            dob_str   = s.get("dob") or "–"
             etiket_html = f'<span style="font-size:11px;color:#6B7A99;margin-left:6px;">{etiket}</span>' if etiket else ""
-
-            st.markdown(f"""
-            <tr style='border-bottom:1px solid rgba(26,43,76,.06);'>
+            rows_html += f"""<tr style='border-bottom:1px solid rgba(26,43,76,.06);'>
               <td style='padding:8px 12px;color:#6B7A99;font-size:12px;'>{renk_emoji} {i}</td>
               <td style='padding:8px 12px;font-weight:600;color:#1A2B4C;font-size:13px;'>{s["name"]}{etiket_html}</td>
-              <td style='padding:8px 12px;color:#1A2B4C;font-size:12px;'>{dob_str}</td>
-              <td style='padding:8px 12px;color:#1A2B4C;font-size:12px;'>{rapor_str}</td>
+              <td style='padding:8px 12px;color:#1A2B4C;font-size:12px;'>{s.get("dob") or "–"}</td>
+              <td style='padding:8px 12px;color:#1A2B4C;font-size:12px;'>{s.get("rapor_bitis") or "–"}</td>
               <td style='padding:8px 12px;font-size:12px;color:#1A2B4C;'>{tani_kisa}</td>
               <td style='padding:8px 12px;'>{mod_tags}</td>
-            </tr>""", unsafe_allow_html=True)
+            </tr>"""
 
-        st.markdown("</tbody></table></div>", unsafe_allow_html=True)
+        st.markdown(f"""
+        <div style='overflow-x:auto;border-radius:12px;border:1px solid rgba(26,43,76,.08);margin-bottom:12px;'>
+        <table style='width:100%;border-collapse:collapse;font-family:DM Sans,sans-serif;'>
+          <thead><tr style='background:linear-gradient(135deg,#38C9C0,#2756D6);'>
+            {"".join(f'<th style="padding:10px 12px;color:white;font-family:Sora,sans-serif;font-size:12px;text-align:left;">{h}</th>' for h in ["#","Ad Soyad","Doğum","Rapor Bitiş","Tanı","Modüller"])}
+          </tr></thead>
+          <tbody style='background:white;'>{rows_html}</tbody>
+        </table></div>""", unsafe_allow_html=True)
 
-        st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
-
+        st.markdown("#### ✏️ Öğrenci Düzenle")
         for s in filtered:
             renk, etiket = rapor_durumu(s.get("rapor_bitis"))
-            tanilar  = ", ".join(d["name"] for d in s.get("diagnoses", [])) or "–"
-            moduller = ", ".join(m["name"] for m in s.get("modules", [])) or "–"
             baslik = f"{renk} {s['name']}"
             if etiket:
                 baslik += f"  ·  {etiket}"
-
             with st.expander(baslik):
-                ic1, ic2, ic3 = st.columns(3)
-                ic1.markdown(f"**Doğum**  \n{s.get('dob') or '–'}")
-                ic2.markdown(f"**Rapor bitiş**  \n{s.get('rapor_bitis') or '–'}")
-                ic3.markdown(f"**Tanılar**  \n{tanilar[:80]}{'…' if len(tanilar) > 80 else ''}")
-                st.markdown(f"**Modüller:** {moduller}")
-                st.markdown("---")
 
                 with st.form(f"edit_{s['id']}"):
                     fc1, fc2, fc3 = st.columns(3)

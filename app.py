@@ -88,7 +88,6 @@ nav{position:fixed;top:0;left:0;right:0;z-index:1000;padding:0 6%;
   animation:pulse-dot 2s ease-in-out infinite;}
 @keyframes pulse-dot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(1.3)}}
 @keyframes dot-drop{from{opacity:0;transform:scale(0) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
-@keyframes dot-bounce{0%,100%{transform:translateY(0)}40%{transform:translateY(-12px)}65%{transform:translateY(-5px)}}
 .d1{animation:dot-drop .35s cubic-bezier(.34,1.56,.64,1) .05s both;}
 .d2{animation:dot-drop .35s cubic-bezier(.34,1.56,.64,1) .18s both;}
 .d3{animation:dot-drop .35s cubic-bezier(.34,1.56,.64,1) .31s both;}
@@ -468,13 +467,17 @@ def login_sayfasi():
     [data-testid="stFormSubmitButton"]>button:hover{transform:translateY(-1px)!important;
       box-shadow:0 12px 28px rgba(56,201,192,.45)!important;}
 
-    [data-testid="stRadio"]>div{background:rgba(13,27,53,.06)!important;border-radius:12px!important;padding:4px!important;}
-    [data-testid="stRadio"] label{border-radius:10px!important;font-family:'Sora',sans-serif!important;
-      font-size:14px!important;font-weight:600!important;padding:9px 20px!important;
-      flex:1!important;text-align:center!important;transition:all .2s!important;}
+    [data-testid="stRadio"]>div{background:rgba(13,27,53,.06)!important;border-radius:50px!important;padding:5px!important;display:flex!important;}
+    [data-testid="stRadio"] label{border-radius:50px!important;font-family:'Sora',sans-serif!important;
+      font-size:15px!important;font-weight:700!important;padding:12px 0!important;
+      flex:1!important;text-align:center!important;transition:all .25s!important;
+      color:#6B7A99!important;cursor:pointer!important;}
     [data-testid="stRadio"] label:has(input:checked){
-      background:linear-gradient(135deg,#38C9C0,#2756D6)!important;color:white!important;
-      box-shadow:0 4px 12px rgba(56,201,192,.3)!important;}
+      background:linear-gradient(135deg,#38C9C0,#2756D6)!important;
+      color:white!important;-webkit-text-fill-color:white!important;
+      box-shadow:0 6px 18px rgba(56,201,192,.4)!important;}
+    [data-testid="stRadio"] label:not(:has(input:checked)):hover{
+      background:rgba(13,27,53,.08)!important;color:#1A2B4C!important;}
     [data-testid="stRadio"] [data-baseweb="radio"]>div:first-child{display:none!important;}
     [data-testid="stAlert"]{border-radius:12px!important;}
     </style>""", unsafe_allow_html=True)
