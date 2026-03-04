@@ -510,6 +510,7 @@ def login_sayfasi():
 
     st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
 
+    mod = st.radio("", ["Giriş Yap", "Kayıt Ol"], horizontal=True, label_visibility="collapsed")
     st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
 
     if mod == "Giriş Yap":
