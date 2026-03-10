@@ -26,15 +26,21 @@ TANI_MODUL_MAP = {
 ALL_TANILAR  = sorted(TANI_MODUL_MAP.keys())
 ALL_MODULLER = sorted({m for v in TANI_MODUL_MAP.values() for m in v})
 
-# Her tanı için renk
-TANI_RENKLER = {
-    "Bedensel Yetersizliği Olan Bireyler İçin Destek Eğitim Programı":      ("#FF6B6B", "#FFF0F0"),
-    "Dil ve Konuşma Bozukluğu Olan Bireyler İçin Destek Eğitim Programı":  ("#F5883A", "#FFF5ED"),
-    "Görme Yetersizliği Olan Bireyler İçin Destek Eğitim Programı":         ("#9B59B6", "#F8F0FF"),
-    "İşitme Yetersizliği Olan Bireyler İçin Destek Eğitim Programı":        ("#2756D6", "#EEF3FF"),
-    "Otizm Spektrum Bozukluğu Olan Bireyler İçin Destek Eğitim Programı":  ("#38C9C0", "#EDFAFA"),
-    "Öğrenme Güçlüğü Olan Bireyler İçin Destek Eğitim Programı":           ("#E67E22", "#FFF8F0"),
-    "Zihinsel Yetersizliği Olan Bireyler İçin Destek Eğitim Programı":      ("#27AE60", "#EDFFF4"),
+TANI_META = {
+    "Bedensel Yetersizliği Olan Bireyler İçin Destek Eğitim Programı":
+        {"renk": "#E74C3C", "bg": "#FEF0EF", "border": "#FADADD", "ikon": "♿"},
+    "Dil ve Konuşma Bozukluğu Olan Bireyler İçin Destek Eğitim Programı":
+        {"renk": "#E67E22", "bg": "#FEF5EC", "border": "#FAE0C8", "ikon": "🗣"},
+    "Görme Yetersizliği Olan Bireyler İçin Destek Eğitim Programı":
+        {"renk": "#8E44AD", "bg": "#F5EEF8", "border": "#E8D5F0", "ikon": "👁"},
+    "İşitme Yetersizliği Olan Bireyler İçin Destek Eğitim Programı":
+        {"renk": "#2756D6", "bg": "#EEF3FF", "border": "#C9D8F8", "ikon": "👂"},
+    "Otizm Spektrum Bozukluğu Olan Bireyler İçin Destek Eğitim Programı":
+        {"renk": "#16A085", "bg": "#E8F8F5", "border": "#A9DFBF", "ikon": "🧩"},
+    "Öğrenme Güçlüğü Olan Bireyler İçin Destek Eğitim Programı":
+        {"renk": "#D35400", "bg": "#FDF0E7", "border": "#F5CBA7", "ikon": "📚"},
+    "Zihinsel Yetersizliği Olan Bireyler İçin Destek Eğitim Programı":
+        {"renk": "#1A8A4A", "bg": "#E9F7EF", "border": "#A9DFBF", "ikon": "🧠"},
 }
 
 
@@ -55,43 +61,83 @@ def show():
 
     kurum_ad = st.session_state.get("kurum_ad", "")
 
+    # ── Hoşgeldiniz kartı ─────────────────────────────────────────────────────
     st.markdown(f"""
-    <div style="background:linear-gradient(135deg,rgba(56,201,192,.1),rgba(39,86,214,.08));
-         border:1.5px solid rgba(56,201,192,.25);border-radius:18px;padding:28px 32px;margin-bottom:24px;">
-      <div style="font-family:Sora,sans-serif;font-size:22px;font-weight:800;
-           color:#0D1B35;margin-bottom:6px;">
-        👋 Hoş geldiniz, <span style="color:#38C9C0;">{kurum_ad}</span>
-      </div>
-      <div style="font-size:14px;color:#6B7A99;line-height:1.7;">
-        Rehapp'a bağlısınız. Öğrencilerinizi <b>Öğrenci</b> sekmesinden yönetebilir,
-        <b>Grup Oluştur</b> sekmesinden mevzuata uygun gruplar kurabilir,
-        <b>Gruplar</b> sekmesinden kayıtlı gruplarınızı görüntüleyebilirsiniz.
+    <div style="background:linear-gradient(135deg,#0D1B35 0%,#1A3A6B 60%,#1A7A74 100%);
+         border-radius:20px;padding:32px 36px;margin-bottom:28px;position:relative;overflow:hidden;">
+      <div style="position:absolute;top:-30px;right:-30px;width:160px;height:160px;
+           border-radius:50%;background:rgba(56,201,192,.12);"></div>
+      <div style="position:absolute;bottom:-40px;right:60px;width:100px;height:100px;
+           border-radius:50%;background:rgba(39,86,214,.15);"></div>
+      <div style="font-family:Sora,sans-serif;font-size:13px;font-weight:600;
+           color:rgba(56,201,192,.8);letter-spacing:1.5px;text-transform:uppercase;
+           margin-bottom:8px;">HOŞ GELDİNİZ</div>
+      <div style="font-family:Sora,sans-serif;font-size:26px;font-weight:800;
+           color:white;margin-bottom:10px;">{kurum_ad}</div>
+      <div style="font-size:14px;color:rgba(255,255,255,.65);line-height:1.8;max-width:520px;">
+        Öğrencilerinizi <b style="color:rgba(56,201,192,.9);">Öğrenci</b> sekmesinden,
+        mevzuata uygun grupları <b style="color:rgba(56,201,192,.9);">Grup Oluştur</b> sekmesinden,
+        kayıtlı gruplarınızı <b style="color:rgba(56,201,192,.9);">Gruplar</b> sekmesinden yönetebilirsiniz.
       </div>
     </div>""", unsafe_allow_html=True)
 
+    # ── Harita başlığı ────────────────────────────────────────────────────────
     st.markdown("""
-    <div style="font-family:Sora,sans-serif;font-size:17px;font-weight:700;
-         color:#0D1B35;margin-bottom:4px;">📋 Grup Eğitimi — Tanı & Modül Haritası</div>
-    <div style="font-size:13px;color:#6B7A99;margin-bottom:20px;">
-        Grup oluşturmada kullanılan tanı → modül eşleştirme tablosu
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px;">
+      <div style="width:4px;height:28px;background:linear-gradient(#38C9C0,#2756D6);
+           border-radius:4px;"></div>
+      <div style="font-family:Sora,sans-serif;font-size:18px;font-weight:800;color:#0D1B35;">
+        Grup Eğitimi Tanı → Modül Haritası
+      </div>
+    </div>
+    <div style="font-size:13px;color:#8896B0;margin-bottom:24px;margin-left:16px;">
+      Grup oluşturmada kullanılan mevzuat tabanlı eşleştirme rehberi
     </div>""", unsafe_allow_html=True)
 
-    # Her tanıyı kart olarak göster
+    # ── Tanı kartları ─────────────────────────────────────────────────────────
     for tani, moduller in TANI_MODUL_MAP.items():
-        renk, bg = TANI_RENKLER.get(tani, ("#2756D6", "#EEF3FF"))
-        kisa = tani.replace(" Olan Bireyler İçin Destek Eğitim Programı", "")
+        meta = TANI_META.get(tani, {"renk":"#2756D6","bg":"#EEF3FF","border":"#C9D8F8","ikon":"📋"})
+        renk   = meta["renk"]
+        bg     = meta["bg"]
+        border = meta["border"]
+        ikon   = meta["ikon"]
+        mod_count = len(moduller)
+
         mod_badges = "".join(
-            f'<span style="display:inline-block;background:white;color:{renk};'
-            f'border:1.5px solid {renk};border-radius:20px;padding:3px 12px;'
-            f'font-size:12px;font-weight:500;margin:3px 4px;">{m}</span>'
+            f"""<span style="display:inline-flex;align-items:center;gap:5px;
+                background:white;color:{renk};border:1.5px solid {border};
+                border-radius:30px;padding:5px 14px;font-size:12px;font-weight:600;
+                margin:4px 3px;box-shadow:0 1px 3px rgba(0,0,0,.06);">
+                <span style="width:6px;height:6px;border-radius:50%;
+                  background:{renk};display:inline-block;flex-shrink:0;"></span>
+                {m}
+              </span>"""
             for m in moduller
         )
+
         st.markdown(f"""
-        <div style="background:{bg};border:1.5px solid {renk}33;border-radius:14px;
-             padding:16px 20px;margin-bottom:12px;">
-          <div style="font-family:Sora,sans-serif;font-weight:700;font-size:14px;
-               color:{renk};margin-bottom:10px;">
-            ● {kisa}
+        <div style="background:{bg};border:1.5px solid {border};border-radius:16px;
+             padding:0;margin-bottom:14px;overflow:hidden;
+             box-shadow:0 2px 8px rgba(0,0,0,.05);">
+
+          <div style="background:linear-gradient(135deg,{renk}18,{renk}08);
+               border-bottom:1px solid {border};padding:16px 22px;
+               display:flex;align-items:center;gap:14px;">
+            <div style="width:42px;height:42px;border-radius:12px;
+                 background:{renk}22;display:flex;align-items:center;
+                 justify-content:center;font-size:20px;flex-shrink:0;">{ikon}</div>
+            <div style="flex:1;">
+              <div style="font-family:Sora,sans-serif;font-weight:700;font-size:14px;
+                   color:{renk};line-height:1.4;">{tani}</div>
+            </div>
+            <div style="background:{renk};color:white;border-radius:20px;
+                 padding:3px 12px;font-size:12px;font-weight:700;
+                 font-family:Sora,sans-serif;white-space:nowrap;flex-shrink:0;">
+              {mod_count} modül
+            </div>
           </div>
-          <div style="line-height:2;">{mod_badges}</div>
+
+          <div style="padding:14px 22px 18px;">
+            {mod_badges}
+          </div>
         </div>""", unsafe_allow_html=True)
