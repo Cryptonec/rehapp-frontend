@@ -127,6 +127,7 @@ def show():
 
         col_kart, col_x = st.columns([10, 1])
         with col_kart:
+            etiket_span = f'<span style="font-size:12px;font-weight:400;color:{renk};margin-left:4px;">{etiket_str}</span>' if etiket_str else ""
             st.markdown(f"""
             <div class="oyuncu-kart">
               <div class="oyuncu-numara">{i+1}</div>
@@ -134,10 +135,7 @@ def show():
                 <div class="oyuncu-ad">
                   <span style="display:inline-block;width:8px;height:8px;border-radius:50%;
                     background:{renk};margin-right:7px;vertical-align:middle;"></span>
-                  {uye["name"]}
-                  <span style="font-size:12px;font-weight:400;color:{renk};margin-left:4px;">
-                    {etiket_str}
-                  </span>
+                  {uye["name"]}{etiket_span}
                 </div>
                 <div style="margin-top:4px;">{mod_badges}</div>
               </div>
@@ -180,8 +178,8 @@ def show():
                 if not (s_mods & mevcut_modler):
                     continue
 
-                # 2. Tanı uyumu — her iki tarafta tanı varsa kesişim zorunlu
-                if mevcut_diag and s_diags and not (s_diags & mevcut_diag):
+                # 2. Tanı uyumu — ortak tanı kesişimi zorunlu (her iki taraf dolu olmalı)
+                if not mevcut_diag or not s_diags or not (s_diags & mevcut_diag):
                     continue
 
                 # 3. Yaş uyumu — yeni üye eklenince max fark 3 yılı geçmemeli
