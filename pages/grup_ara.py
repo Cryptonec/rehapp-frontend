@@ -179,12 +179,18 @@ def show():
                 s_mods  = mods_by_id.get(s["id"],  frozenset())
                 s_diags = diags_by_id.get(s["id"], frozenset())
 
-                # 1. Modül uyumu — ortak modül kalmalı
-                if not (s_mods & mevcut_modler):
+                # 1. Tanı uyumu — ortak tanı zorunlu
+                if not mevcut_diag or not s_diags or not (s_diags & mevcut_diag):
                     continue
 
-                # 2. Tanı uyumu — ortak tanı kesişimi zorunlu (her iki taraf dolu olmalı)
-                if not mevcut_diag or not s_diags or not (s_diags & mevcut_diag):
+                # 2. Modül uyumu — ortak tanıdan gelen modüller eşleşmeli
+                ortak_tani_adaylar = s_diags & mevcut_diag
+                from pages.lila_import import TANI_MODUL_MAP
+                ortak_tani_modulleri = frozenset(
+                    m for t in ortak_tani_adaylar
+                    for m in TANI_MODUL_MAP.get(t, [])
+                )
+                if not (s_mods & mevcut_modler & ortak_tani_modulleri):
                     continue
 
                 # 3. Yaş uyumu — yeni üye eklenince max fark 3 yılı geçmemeli
@@ -253,9 +259,17 @@ def show():
             yas_farki = round(max(yaslar) - min(yaslar), 2)
 
         # Uyarı kontrolleri
+        from pages.lila_import import TANI_MODUL_MAP
         uyarilar = []
         if not ortak_tani:
             uyarilar.append("⚠️ Ortak tanı yok — bu öğrenciler birlikte gruplanamaz.")
+        else:
+            # Ortak tanının modüllerinden kesişim kontrol et
+            ortak_tani_modulleri = frozenset(
+                m for t in ortak_tani for m in TANI_MODUL_MAP.get(t, [])
+            )
+            if not (ortak_modul & ortak_tani_modulleri):
+                uyarilar.append("⚠️ Ortak tanıya ait ortak modül yok — bu öğrenciler birlikte gruplanamaz.")
         if not ortak_modul:
             uyarilar.append("⚠️ Ortak modül yok — bu öğrenciler birlikte gruplanamaz.")
         if yas_farki is not None and yas_farki > 3:
