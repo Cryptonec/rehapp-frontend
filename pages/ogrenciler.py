@@ -32,16 +32,23 @@ def show():
     lila_import.show_import()
     st.divider()
 
-    students = api.get_students()
-    diags    = api.get_diagnoses()
-    mods     = api.get_modules()
+    # Cache — arama yazarken her rerun'da API çağrısı yapma
+    bust = st.session_state.get("students_cache_bust", 0)
+    if st.session_state.get("_og_bust") != bust or "_og_students" not in st.session_state:
+        st.session_state["_og_students"] = api.get_students()
+        st.session_state["_og_diags"]    = api.get_diagnoses()
+        st.session_state["_og_mods"]     = api.get_modules()
+        st.session_state["_og_bust"]     = bust
+    students = st.session_state["_og_students"]
+    diags    = st.session_state["_og_diags"]
+    mods     = st.session_state["_og_mods"]
     diag_map = {d["name"]: d["id"] for d in diags}
     mod_map  = {m["name"]: m["id"] for m in mods}
 
     # ── Arama / Filtre ────────────────────────────────────────────────────────
     col_ara, col_filtre = st.columns([3, 1])
     with col_ara:
-        arama = st.text_input("🔍 Öğrenci ara", placeholder="Ad ile ara...", label_visibility="collapsed")
+        arama = st.text_input("🔍 Öğrenci ara", placeholder="Ad ile ara...", label_visibility="collapsed", key="ogrenci_arama")
     with col_filtre:
         filtre = st.selectbox("Filtre", ["Tümü", "Raporu Biten", "30 Gün İçinde", "Normal"], label_visibility="collapsed")
 
