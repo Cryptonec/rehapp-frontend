@@ -845,6 +845,37 @@ tab_labels = ["⚙️ Yönetim", "👤 Öğrenci", "🔎 Grup Oluştur", "⭐ Gr
 if is_admin:
     tab_labels.append("🛡️ Admin")
 
+# Sayfa yenilenince aktif sekmeyi koru (query param: ?tab=0..4)
+_tab_idx = int(st.query_params.get("tab", 0))
+if _tab_idx >= len(tab_labels): _tab_idx = 0
+
+# JS ile aktif tab'ı set et
+st.markdown(f"""<script>
+  window._rehapp_tab = {_tab_idx};
+  function _setTab() {{
+    var btns = document.querySelectorAll('[data-baseweb="tab"]');
+    if (btns.length > window._rehapp_tab) {{
+      btns[window._rehapp_tab].click();
+    }} else {{
+      setTimeout(_setTab, 100);
+    }}
+  }}
+  setTimeout(_setTab, 200);
+  // Tab tıklandığında query param güncelle
+  document.addEventListener('click', function(e) {{
+    var btn = e.target.closest('[data-baseweb="tab"]');
+    if (btn) {{
+      var btns = Array.from(document.querySelectorAll('[data-baseweb="tab"]'));
+      var idx = btns.indexOf(btn);
+      if (idx >= 0) {{
+        var url = new URL(window.location);
+        url.searchParams.set('tab', idx);
+        window.history.replaceState({{}}, '', url);
+      }}
+    }}
+  }}, true);
+</script>""", unsafe_allow_html=True)
+
 tabs = st.tabs(tab_labels)
 with tabs[0]: yonetim.show()
 with tabs[1]: ogrenciler.show()

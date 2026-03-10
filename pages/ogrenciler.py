@@ -57,7 +57,10 @@ def show():
 
     filtered = students
     if arama:
-        filtered = [s for s in filtered if arama.lower() in s["name"].lower()]
+        import unicodedata as _ud
+        def _norm(t):
+            return _ud.normalize('NFC', t.lower()).translate(str.maketrans('çğışöüî', 'cgisouı'))
+        filtered = [s for s in filtered if _norm(arama) in _norm(s["name"])]
     if filtre == "Raporu Biten":
         filtered = [s for s in filtered if s.get("rapor_bitis") and (date.fromisoformat(s["rapor_bitis"]) < date.today())]
     elif filtre == "30 Gün İçinde":

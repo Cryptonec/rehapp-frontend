@@ -283,6 +283,14 @@ def _do_import(students, mevcut_names, silinecekler):
         prog.progress((len(students)+j+1)/toplam)
 
     prog.empty()
+    # Doğum tarihi eksik öğrencileri kontrol et
+    tum_ogrenciler = api.get_students()
+    dob_eksik = [s["name"] for s in tum_ogrenciler if not s.get("dob")]
+    if dob_eksik:
+        st.warning(
+            f"⚠️ **{len(dob_eksik)} öğrencinin doğum tarihi eksik** — lütfen manuel girin:\n\n"
+            + "\n".join(f"• {isim}" for isim in dob_eksik)
+        )
     st.markdown(f"""
     <div style='background:linear-gradient(135deg,rgba(66,184,177,.12),rgba(43,82,196,.08));
          border-radius:12px;padding:14px 18px;border:1px solid rgba(66,184,177,.25);'>
