@@ -10,8 +10,6 @@ Performans optimizasyonları:
 """
 import streamlit as st
 from datetime import date
-from html import unescape
-import re
 import api_client as api
 
 
@@ -42,27 +40,6 @@ def turkish_sort_key(s):
     return s.lower().translate(str.maketrans("çğıöşüÇĞİÖŞÜ", "cgiosucgiosu"))
 
 
-def _normalize_module_names(raw_name):
-    """Bozuk/HTML enjekte edilmiş modül isimlerini temizleyip liste döndürür."""
-    if not raw_name:
-        return []
-
-    txt = str(raw_name).strip()
-    if not txt:
-        return []
-
-    if "<" in txt and "mod-badge" in txt:
-        badges = re.findall(r'<span\s+class=["\']mod-badge["\']>(.*?)</span>', txt, flags=re.IGNORECASE)
-        if badges:
-            return [unescape(b).strip() for b in badges if unescape(b).strip()]
-
-    protected = re.sub(r"</(span|div|p|li|br)\s*>", " / ", txt, flags=re.IGNORECASE)
-    cleaned = re.sub(r"<[^>]+>", "", protected)
-    cleaned = unescape(cleaned).strip()
-    parts = [p.strip() for p in cleaned.split("/") if p.strip()]
-    return parts
-
-
 # ── Veri yükleme — session_state cache ───────────────────────────────────────
 
 def _load():
@@ -75,15 +52,7 @@ def _load():
         raw = api.get_students()
 
         # Her öğrenci için frozenset — kesişim O(1)
-        mods_by_id = {}
-        for s in raw:
-            normalized_names = []
-            for m in s.get("modules", []):
-                mod_names = _normalize_module_names(m.get("name"))
-                if not isinstance(mod_names, list):
-                    mod_names = list(mod_names) if mod_names else []
-                normalized_names.extend(mod_names)
-            mods_by_id[s["id"]] = frozenset(normalized_names)
+        mods_by_id  = {s["id"]: frozenset(m["name"] for m in s.get("modules",   [])) for s in raw}
         diags_by_id = {s["id"]: frozenset(d["name"] for d in s.get("diagnoses", [])) for s in raw}
 
         # Hızlı isim→id haritası
@@ -108,30 +77,6 @@ def _load():
 # ── Ana sayfa ─────────────────────────────────────────────────────────────────
 
 def show():
-    st.markdown("""
-    <style>
-    @keyframes rh-ov-bounce{0%,100%{transform:translateY(0)}40%{transform:translateY(-16px)}65%{transform:translateY(-7px)}}
-    .rh-overlay{position:fixed;top:0;left:0;right:0;bottom:0;
-      background:rgba(240,244,250,.92);backdrop-filter:blur(6px);
-      display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;}
-    .rh-ov-balls{display:flex;gap:12px;margin-bottom:16px;}
-    .rh-ob1{width:16px;height:16px;border-radius:50%;background:#2756D6;animation:rh-ov-bounce .6s ease-in-out infinite;}
-    .rh-ob2{width:16px;height:16px;border-radius:50%;background:#38C9C0;animation:rh-ov-bounce .6s ease-in-out .15s infinite;}
-    .rh-ob3{width:16px;height:16px;border-radius:50%;background:#F5883A;animation:rh-ov-bounce .6s ease-in-out .3s infinite;}
-    .rh-ov-text{font-family:Sora,sans-serif;font-size:13px;color:#6B7A99;}
-    </style>""", unsafe_allow_html=True)
-
-    if st.session_state.get("grup_loading"):
-        st.session_state["grup_loading"] = False
-        st.markdown('''<div class="rh-overlay">
-          <div class="rh-ov-balls">
-            <div class="rh-ob1"></div><div class="rh-ob2"></div><div class="rh-ob3"></div>
-          </div>
-          <div class="rh-ov-text">Yükleniyor...</div>
-        </div>''', unsafe_allow_html=True)
-        import time; time.sleep(0.6)
-        st.rerun()
-
     st.markdown("""
     <style>
     .oyuncu-kart{background:white;border:2px solid #38C9C0;border-radius:14px;
@@ -182,28 +127,28 @@ def show():
 
         col_kart, col_x = st.columns([10, 1])
         with col_kart:
-            html = (
-                '<div class="oyuncu-kart">'
-                '<div class="oyuncu-numara">' + str(i+1) + '</div>'
-                '<div style="flex:1">'
-                '<div class="oyuncu-ad">'
-                '<span style="display:inline-block;width:8px;height:8px;border-radius:50%;'
-                'background:' + renk + ';margin-right:7px;vertical-align:middle;"></span>'
-                + uye["name"] +
-                '<span style="font-size:12px;font-weight:400;color:' + renk + ';margin-left:4px;">'
-                + etiket_str + '</span>'
-                '</div>'
-                '<div style="margin-top:4px;">' + mod_badges + '</div>'
-                '</div>'
-                '</div>'
-            )
-            st.markdown(html, unsafe_allow_html=True)
+            st.markdown(f"""
+            <div class="oyuncu-kart">
+              <div class="oyuncu-numara">{i+1}</div>
+              <div style="flex:1">
+                <div class="oyuncu-ad">
+                  <span style="display:inline-block;width:8px;height:8px;border-radius:50%;
+                    background:{renk};margin-right:7px;vertical-align:middle;"></span>
+                  {uye["name"]}
+                  <span style="font-size:12px;font-weight:400;color:{renk};margin-left:4px;">
+                    {etiket_str}
+                  </span>
+                </div>
+                <div style="margin-top:4px;">{mod_badges}</div>
+              </div>
+            </div>""", unsafe_allow_html=True)
         with col_x:
             if is_last:
                 st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
                 if st.button("✕", key=f"srch_sil_{i}", help="Bu üyeyi çıkar"):
                     st.session_state["srch_grup_uyeleri"].pop()
                     st.rerun()
+
     # ── Sonraki aday hesaplama ────────────────────────────────────────────────
     if len(grup) < 10:
         etiket_lbl = "İlk öğrenciyi seçin" if not grup else f"{len(grup)+1}. üyeyi seçin"
@@ -262,32 +207,29 @@ def show():
             aday_lst.append(lbl)
             aday_map[lbl] = isim
 
+        siradaki_lbl = st.selectbox(
+            etiket_lbl,
+            ["— Seçiniz —"] + aday_lst,
+            key=f"srch_siradaki_{len(grup)}",
+            label_visibility="visible",
+        )
+
+        if siradaki_lbl != "— Seçiniz —":
+            siradaki = aday_map.get(siradaki_lbl, siradaki_lbl)
+            s = s_map.get(siradaki, {})
+            sid = s.get("id")
+            st.session_state["srch_grup_uyeleri"].append({
+                "id":          sid,
+                "name":        siradaki,
+                "dob":         s.get("dob"),
+                "rapor_bitis": s.get("rapor_bitis"),
+                "mod_adlari":  sorted(mods_by_id.get(sid, frozenset())),
+                "diag_adlari": sorted(diags_by_id.get(sid, frozenset())),
+            })
+            st.rerun()
+
         if not aday_lst and grup:
             st.info("Bu gruba eklenebilecek uyumlu öğrenci bulunamadı.")
-        else:
-            def _on_secim():
-                lbl = st.session_state.get(f"srch_select_{len(grup)}")
-                if not lbl or lbl == "— Seçiniz —":
-                    return
-                isim = aday_map.get(lbl, lbl)
-                s    = s_map.get(isim, {})
-                sid  = s.get("id")
-                st.session_state["srch_grup_uyeleri"].append({
-                    "id":          sid,
-                    "name":        isim,
-                    "dob":         s.get("dob"),
-                    "rapor_bitis": s.get("rapor_bitis"),
-                    "mod_adlari":  sorted(mods_by_id.get(sid, frozenset())),
-                    "diag_adlari": sorted(diags_by_id.get(sid, frozenset())),
-                })
-                st.session_state["grup_loading"] = True
-
-            st.selectbox(
-                etiket_lbl,
-                ["— Seçiniz —"] + aday_lst,
-                key=f"srch_select_{len(grup)}",
-                on_change=_on_secim,
-            )
 
     # ── Özet + Kaydet ─────────────────────────────────────────────────────────
     if len(grup) >= 2:
@@ -306,12 +248,12 @@ def show():
 
         # Uyarı kontrolleri
         uyarilar = []
-        if all(diags_by_id.get(u["id"]) for u in grup) and not ortak_tani:
+        if not ortak_tani:
             uyarilar.append("⚠️ Ortak tanı yok — bu öğrenciler birlikte gruplanamaz.")
         if not ortak_modul:
             uyarilar.append("⚠️ Ortak modül yok — bu öğrenciler birlikte gruplanamaz.")
-        if yas_farki is not None and yas_farki > 4:
-            uyarilar.append(f"⚠️ Yaş farkı {yas_farki} yıl — 4 yılı aşıyor.")
+        if yas_farki is not None and yas_farki > 3:
+            uyarilar.append(f"⚠️ Yaş farkı {yas_farki} yıl — 3 yılı aşıyor.")
 
         if uyarilar:
             for u in uyarilar:
