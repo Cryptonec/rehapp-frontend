@@ -17,7 +17,10 @@ import api_client as api
 
 def age_years(dob_str):
     if not dob_str: return None
-    try: return (date.today() - date.fromisoformat(dob_str)).days / 365.25
+    try:
+        days = (date.today() - date.fromisoformat(dob_str)).days
+        if days <= 0: return None  # gelecek/bugün → geçersiz
+        return days / 365.25
     except: return None
 
 def rapor_renk(rb):
@@ -162,7 +165,9 @@ def show():
             mevcut_modler= frozenset.intersection(*mod_setleri)
             mevcut_diag  = frozenset.intersection(*diag_setleri)
 
-            doblar   = [u["dob"] for u in grup if u.get("dob")]
+            s_by_id2 = {s["id"]: s for s in students}
+            doblar   = [s_by_id2.get(u["id"], u).get("dob") for u in grup]
+            doblar   = [d for d in doblar if d]
             yas_min  = min(age_years(d) for d in doblar) if doblar else 0
             yas_max  = max(age_years(d) for d in doblar) if doblar else 100
 
@@ -238,7 +243,10 @@ def show():
         ortak_modul  = frozenset.intersection(*mod_setleri)
         ortak_tani   = frozenset.intersection(*diag_setleri)
 
-        doblar = [u["dob"] for u in grup if u.get("dob")]
+        # dob'u session_state değil anlık students verisinden al
+        s_by_id = {s["id"]: s for s in students}
+        doblar = [s_by_id.get(u["id"], u).get("dob") for u in grup]
+        doblar = [d for d in doblar if d]
         yas_farki = None
         if len(doblar) == len(grup):
             yaslar    = [age_years(d) for d in doblar]
