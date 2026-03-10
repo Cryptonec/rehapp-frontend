@@ -45,6 +45,16 @@ def show():
     with col_filtre:
         filtre = st.selectbox("Filtre", ["Tümü", "Raporu Biten", "30 Gün İçinde", "Normal"], label_visibility="collapsed")
 
+    # Alfabetik sırala
+    import unicodedata
+    def tr_key(s):
+        return unicodedata.normalize('NFC', s['name'].lower()).translate(
+            str.maketrans('çğışöüÇĞİŞÖÜ', 'cgisoucgisou'))
+    students = sorted(students, key=tr_key)
+
+    # Son import tarihini al (lila_import sonrası set edilir)
+    son_import = st.session_state.get('son_lila_import')
+
     filtered = students
     if arama:
         filtered = [s for s in filtered if arama.lower() in s["name"].lower()]
@@ -73,9 +83,26 @@ def show():
                 for m in s.get("modules", [])
             ) or "–"
             etiket_html = f'<span style="font-size:11px;color:#6B7A99;margin-left:6px;">{etiket}</span>' if etiket else ""
+            # Yeni öğrenci rozeti
+            yeni_html = ""
+            if son_import and s.get("created_at"):
+                try:
+                    from datetime import timezone
+                    created = s["created_at"]
+                    if isinstance(created, str):
+                        from datetime import datetime as dt
+                        created = dt.fromisoformat(created.replace("Z","+00:00"))
+                    if isinstance(son_import, str):
+                        from datetime import datetime as dt
+                        son_import_dt = dt.fromisoformat(son_import)
+                    else:
+                        son_import_dt = son_import
+                    if created > son_import_dt:
+                        yeni_html = '<span style="font-size:11px;background:#38C9C0;color:white;border-radius:4px;padding:1px 6px;margin-left:6px;">🆕</span>'
+                except: pass
             rows_html += f"""<tr style='border-bottom:1px solid rgba(26,43,76,.06);'>
               <td style='padding:8px 12px;color:#6B7A99;font-size:12px;'>{renk_emoji} {i}</td>
-              <td style='padding:8px 12px;font-weight:600;color:#1A2B4C;font-size:13px;'>{s["name"]}{etiket_html}</td>
+              <td style='padding:8px 12px;font-weight:600;color:#1A2B4C;font-size:13px;'>{s["name"]}{yeni_html}{etiket_html}</td>
               <td style='padding:8px 12px;color:#1A2B4C;font-size:12px;'>{s.get("dob") or "–"}</td>
               <td style='padding:8px 12px;color:#1A2B4C;font-size:12px;'>{s.get("rapor_bitis") or "–"}</td>
               <td style='padding:8px 12px;font-size:12px;color:#1A2B4C;'>{tani_kisa}</td>
