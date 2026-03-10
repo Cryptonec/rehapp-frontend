@@ -28,7 +28,7 @@ ALL_MODULLER = sorted({m for v in TANI_MODUL_MAP.values() for m in v})
 
 TANI_META = {
     "Bedensel Yetersizliği Olan Bireyler İçin Destek Eğitim Programı":
-        {"renk": "#E74C3C", "bg": "#FEF0EF", "border": "#FADADD", "ikon": "♿"},
+        {"renk": "#0891B2", "bg": "#ECFEFF", "border": "#A5F3FC", "ikon": "♿"},
     "Dil ve Konuşma Bozukluğu Olan Bireyler İçin Destek Eğitim Programı":
         {"renk": "#E67E22", "bg": "#FEF5EC", "border": "#FAE0C8", "ikon": "🗣"},
     "Görme Yetersizliği Olan Bireyler İçin Destek Eğitim Programı":
