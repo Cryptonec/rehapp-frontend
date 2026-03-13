@@ -99,6 +99,7 @@ def show():
     # Sıfırla butonu
     if st.button("🧹 Sıfırla", key="srch_clear"):
         st.session_state.pop("srch_grup_uyeleri", None)
+        st.session_state["_rerun_tab"] = 2
         st.rerun()
 
     # ── Veri yükle (cache'li) ─────────────────────────────────────────────────
@@ -148,6 +149,7 @@ def show():
                 st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
                 if st.button("✕", key=f"srch_sil_{i}", help="Bu üyeyi çıkar"):
                     st.session_state["srch_grup_uyeleri"].pop()
+                    st.session_state["_rerun_tab"] = 2
                     st.rerun()
 
     # ── Sonraki aday hesaplama ────────────────────────────────────────────────
@@ -235,6 +237,7 @@ def show():
                 "mod_adlari":  sorted(mods_by_id.get(sid, frozenset())),
                 "diag_adlari": sorted(diags_by_id.get(sid, frozenset())),
             })
+            st.session_state["_rerun_tab"] = 2
             st.rerun()
 
         if not aday_lst and grup:
@@ -323,4 +326,5 @@ def show():
                     if api.create_saved_group(payload):
                         st.success("✅ Grup kaydedildi!")
                         st.session_state["srch_grup_uyeleri"] = []
+                        st.session_state["_rerun_tab"] = 2
                         st.rerun()

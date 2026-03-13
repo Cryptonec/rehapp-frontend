@@ -72,7 +72,8 @@ def get_students():
     if is_demo_mode():
         _demo_init()
         from demo_data import DEMO_STUDENTS
-        return DEMO_STUDENTS + st.session_state["demo_students"]
+        all_students = DEMO_STUDENTS + st.session_state["demo_students"]
+        return [{**s, "name": s["name"].upper()} for s in all_students]
     return _handle(requests.get(f"{API_URL}/api/students", headers=_headers())) or []
 
 def create_student(payload):
