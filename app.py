@@ -14,7 +14,7 @@ st.set_page_config(
 )
 
 # ── Session state başlangıç değerleri ─────────────────────────────────────────
-for key in ("token", "kurum_id", "kurum_ad"):
+for key in ("token", "kurum_id", "kurum_ad", "is_demo"):
     if key not in st.session_state:
         st.session_state[key] = None
 
@@ -25,9 +25,37 @@ def require_login() -> bool:
     return st.session_state["token"] is not None
 
 
+def _start_demo():
+    """Demo hesabı oturumunu başlat."""
+    st.session_state["token"]    = "DEMO_TOKEN"
+    st.session_state["kurum_id"] = 0
+    st.session_state["kurum_ad"] = "Demo Kurumu"
+    st.session_state["is_demo"]  = True
+    # Demo session state'leri sıfırla
+    st.session_state["demo_students"]        = []
+    st.session_state["demo_saved_groups"]    = []
+    st.session_state["demo_next_student_id"] = 2000
+    st.session_state["demo_next_group_id"]   = 4000
+
+
 # ── Login / Kayıt formu ───────────────────────────────────────────────────────
 def show_login():
     st.title("🧠 Rehapp – Giriş")
+
+    # Demo giriş kartı
+    with st.container(border=True):
+        col_txt, col_btn = st.columns([5, 2])
+        col_txt.markdown(
+            "**Demo Hesap** – Kayıt olmadan uygulamayı deneyin. "
+            "20 örnek öğrenci ve 3 kaydedilmiş grup ile gelir. "
+            "Gerçek veriler kaydedilmez."
+        )
+        if col_btn.button("🎭 Demo ile Giriş", use_container_width=True, type="primary"):
+            _start_demo()
+            st.rerun()
+
+    st.divider()
+
     tab_giris, tab_kayit = st.tabs(["Giriş Yap", "Kayıt Ol"])
 
     with tab_giris:
@@ -66,12 +94,25 @@ def show_login():
 # ── Üst bar ───────────────────────────────────────────────────────────────────
 def show_topbar():
     col1, col2 = st.columns([8, 2])
-    col1.markdown(f"### 🧠 Rehapp &nbsp; | &nbsp; {st.session_state['kurum_ad']}")
+    kurum_label = st.session_state["kurum_ad"]
+    if st.session_state.get("is_demo"):
+        kurum_label += " 🎭"
+    col1.markdown(f"### 🧠 Rehapp &nbsp; | &nbsp; {kurum_label}")
     if col2.button("🚪 Çıkış Yap"):
-        for key in ("token", "kurum_id", "kurum_ad"):
+        for key in ("token", "kurum_id", "kurum_ad", "is_demo",
+                    "demo_students", "demo_saved_groups",
+                    "demo_next_student_id", "demo_next_group_id"):
             st.session_state[key] = None
         st.rerun()
     st.divider()
+
+    # Demo uyarı bandı
+    if st.session_state.get("is_demo"):
+        st.info(
+            "🎭 **Demo Hesap** – Yaptığınız değişiklikler yalnızca bu oturumda geçerlidir. "
+            "Gerçek hesap için çıkış yapıp kayıt olabilirsiniz.",
+            icon=None,
+        )
 
 
 # ── Ana akış ──────────────────────────────────────────────────────────────────
@@ -80,9 +121,9 @@ if not require_login():
     st.stop()
 
 # Kurum ID kontrolü (token var ama kurum_id yoksa güvenlik için logout)
-if not st.session_state.get("kurum_id"):
+if st.session_state.get("kurum_id") is None:
     st.error("Kurum bilgisi bulunamadı. Lütfen tekrar giriş yapın.")
-    for key in ("token", "kurum_id", "kurum_ad"):
+    for key in ("token", "kurum_id", "kurum_ad", "is_demo"):
         st.session_state[key] = None
     st.stop()
 
