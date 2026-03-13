@@ -13,9 +13,25 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-for key in ("token","kurum_id","kurum_ad","kurum_email","page"):
+for key in ("token","kurum_id","kurum_ad","kurum_email","page","is_demo"):
     if key not in st.session_state:
         st.session_state[key] = None
+
+
+def _start_demo():
+    """Demo oturumunu başlat — gerçek API'ye bağlanmaz."""
+    st.session_state["token"]                  = "DEMO_TOKEN"
+    st.session_state["kurum_id"]               = -1
+    st.session_state["kurum_ad"]               = "Demo Kurumu"
+    st.session_state["kurum_email"]            = ""
+    st.session_state["is_demo"]                = True
+    st.session_state["page"]                   = "app"
+    st.session_state["demo_students"]          = []
+    st.session_state["demo_saved_groups"]      = []
+    st.session_state["demo_next_student_id"]   = 2000
+    st.session_state["demo_next_group_id"]     = 4000
+    st.session_state["students_cache_bust"]    = 0
+
 
 # URL param ile sayfa geçişi (landing → login)
 params = st.query_params
@@ -625,7 +641,25 @@ def login_sayfasi():
         st.session_state["page"] = None
         st.rerun()
 
-    st.markdown("<div style='height:4px'></div>", unsafe_allow_html=True)
+    st.markdown("<div style='height:12px'></div>", unsafe_allow_html=True)
+
+    # Demo giriş
+    st.markdown("""
+    <div style='background:linear-gradient(135deg,rgba(56,201,192,.1),rgba(39,86,214,.07));
+         border:1.5px solid rgba(56,201,192,.3);border-radius:14px;padding:14px 18px 10px;
+         margin-bottom:6px;text-align:center;'>
+      <div style='font-family:Sora,sans-serif;font-weight:700;font-size:13px;color:#0D1B35;margin-bottom:4px;'>
+        🎭 Demo Hesap
+      </div>
+      <div style='font-size:12px;color:#6B7A99;margin-bottom:10px;'>
+        Kayıt olmadan deneyin — 20 örnek öğrenci ile gelir, veriler kaydedilmez.
+      </div>
+    </div>""", unsafe_allow_html=True)
+    if st.button("▶ Demo ile Dene", use_container_width=True, key="demo_btn"):
+        _start_demo()
+        st.rerun()
+
+    st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
 
     mod = st.radio("", ["Giriş Yap", "Kayıt Ol"], horizontal=True, label_visibility="collapsed")
     st.markdown("<div style='height:16px'></div>", unsafe_allow_html=True)
@@ -835,6 +869,17 @@ with col_title:
         f"<div style='font-family:DM Sans,sans-serif;font-size:16px;font-weight:500;"
         f"color:#1A2B4C;margin-bottom:-6px;'>🏢 {st.session_state.get('kurum_ad','')}</div>",
         unsafe_allow_html=True,
+    )
+
+# Demo uyarı bandı
+if st.session_state.get("is_demo"):
+    from demo_data import DEMO_MAX_STUDENTS
+    user_count = len(st.session_state.get("demo_students", []))
+    st.info(
+        f"🎭 **Demo Hesap** — Değişiklikler yalnızca bu oturumda geçerlidir. "
+        f"Öğrenci ekleme: **{user_count}/{DEMO_MAX_STUDENTS}**. "
+        "Gerçek hesap için çıkış yapıp **Kayıt Ol**'a tıklayın.",
+        icon=None,
     )
 
 # ── Sekmeler ──────────────────────────────────────────────────────────────────
