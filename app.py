@@ -1087,8 +1087,10 @@ tab_labels = ["⚙️ Yönetim", "👤 Öğrenci", "🔎 Grup Oluştur", "⭐ Gr
 if is_admin:
     tab_labels.append("🛡️ Admin")
 
-# Sayfa yenilenince aktif sekmeyi koru (query param: ?tab=0..4)
-_tab_idx = int(st.query_params.get("tab", 0))
+# Sayfa yenilenince aktif sekmeyi koru
+# Öncelik: st.rerun() öncesi set edilen _rerun_tab → yoksa query param
+_rerun_tab = st.session_state.pop("_rerun_tab", None)
+_tab_idx = int(_rerun_tab if _rerun_tab is not None else st.query_params.get("tab", 0))
 if _tab_idx >= len(tab_labels): _tab_idx = 0
 
 # JS ile aktif tab'ı set et
