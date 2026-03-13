@@ -45,6 +45,9 @@ if params.get("p") == "reset" and params.get("token"):
 if params.get("p") == "forgot" and not st.session_state.get("token"):
     st.session_state["page"] = "forgot"
     st.query_params.clear()
+if params.get("p") == "kvkk":
+    st.session_state["page"] = "kvkk"
+    st.query_params.clear()
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -86,6 +89,10 @@ nav{position:fixed;top:0;left:0;right:0;z-index:1000;padding:0 6%;
 .nav-cta:hover{transform:translateY(-1px);box-shadow:0 8px 20px rgba(56,201,192,.5);color:#ffffff !important;}
 .nav-cta:visited{color:#ffffff !important;}
 .nav-cta svg{width:14px;height:14px;}
+.nav-links{display:flex;align-items:center;gap:28px;}
+.nav-link{font-family:'Plus Jakarta Sans',sans-serif;font-size:14px;font-weight:500;
+  color:var(--mid);text-decoration:none;transition:color .2s;}
+.nav-link:hover{color:var(--navy);}
 
 /* HERO */
 .hero{min-height:100vh;display:flex;align-items:center;justify-content:center;
@@ -215,6 +222,19 @@ nav{position:fixed;top:0;left:0;right:0;z-index:1000;padding:0 6%;
 .cta-title span{color:var(--teal);}
 .cta-sub{font-size:16px;color:rgba(255,255,255,.5);margin-bottom:36px;position:relative;}
 
+/* CONTACT */
+.contact{padding:100px 6%;background:white;}
+.contact-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:56px;}
+@media(max-width:768px){.contact-grid{grid-template-columns:1fr;}}
+.contact-card{background:var(--light);border-radius:20px;padding:36px;text-align:center;
+  border:1px solid rgba(13,27,53,.07);transition:all .25s;}
+.contact-card:hover{transform:translateY(-4px);box-shadow:0 12px 32px rgba(13,27,53,.08);background:white;}
+.contact-icon{font-size:34px;margin-bottom:14px;}
+.contact-label{font-family:Sora,sans-serif;font-weight:700;font-size:15px;color:var(--navy);margin-bottom:6px;}
+.contact-val{font-size:14px;color:var(--mid);line-height:1.6;}
+.contact-link{color:var(--teal);text-decoration:none;font-weight:500;}
+.contact-link:hover{text-decoration:underline;}
+
 /* FOOTER */
 footer{background:#07101F;padding:40px 6%;
   display:flex;align-items:center;justify-content:space-between;flex-wrap:gap;gap:16px;}
@@ -253,12 +273,15 @@ div[data-testid="collapsedControl"]{display:none!important;}
     </div>
     <div class="nav-logo">Reh<span>app</span></div>
   </div>
-  <a class="nav-cta" href="?p=login" target="_self">
-    Giriş Yap / Kayıt Ol
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-      <path d="M5 12h14M12 5l7 7-7 7"/>
-    </svg>
-  </a>
+  <div class="nav-links">
+    <a href="#contact" class="nav-link">Bize Ulaşın</a>
+    <a class="nav-cta" href="?p=login" target="_self">
+      Giriş Yap / Kayıt Ol
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <path d="M5 12h14M12 5l7 7-7 7"/>
+      </svg>
+    </a>
+  </div>
 </nav>
 
 <section class="hero">
@@ -441,10 +464,39 @@ div[data-testid="collapsedControl"]{display:none!important;}
   </a>
 </section>
 
+<section class="contact" id="contact">
+  <div style="text-align:center;max-width:560px;margin:0 auto;">
+    <div class="section-label">İletişim</div>
+    <h2 class="section-title">Bize Ulaşın</h2>
+    <p class="section-sub" style="margin:12px auto 0;">Sorularınız ve destek talepleriniz için buradayız. İş günleri 24 saat içinde yanıt veriyoruz.</p>
+  </div>
+  <div class="contact-grid">
+    <div class="contact-card">
+      <div class="contact-icon">✉️</div>
+      <div class="contact-label">E-posta</div>
+      <div class="contact-val"><a href="mailto:info@rehapp.com.tr" class="contact-link">info@rehapp.com.tr</a></div>
+    </div>
+    <div class="contact-card">
+      <div class="contact-icon">⏱️</div>
+      <div class="contact-label">Yanıt Süresi</div>
+      <div class="contact-val">İş günleri <strong>24 saat</strong> içinde yanıt veriyoruz</div>
+    </div>
+    <div class="contact-card">
+      <div class="contact-icon">🔒</div>
+      <div class="contact-label">Veri Güvenliği</div>
+      <div class="contact-val">KVKK uyumlu altyapı. Verileriniz şifreli ve güvende.</div>
+    </div>
+  </div>
+</section>
+
 <footer>
   <div class="footer-logo">Reh<span>app</span></div>
+  <div style="display:flex;gap:20px;align-items:center;flex-wrap:wrap;">
+    <a href="#contact" class="footer-link">Bize Ulaşın</a>
+    <a href="?p=kvkk" target="_self" class="footer-link">KVKK</a>
+  </div>
   <div class="footer-copy">
-    © 2026 Rehapp &nbsp;·&nbsp; 
+    © 2026 Rehapp &nbsp;·&nbsp;
     <a href="mailto:info@rehapp.com.tr" class="footer-link">info@rehapp.com.tr</a>
   </div>
 </footer>
@@ -736,9 +788,152 @@ def login_sayfasi():
 
     st.markdown("""
     <div style="text-align:center;margin-top:32px;font-size:12px;color:#aaa;">
-      © 2026 Rehapp · 
-      <a href="?p=" style="color:#38C9C0;text-decoration:none">rehapp.com.tr</a>
+      © 2026 Rehapp ·
+      <a href="?p=" style="color:#38C9C0;text-decoration:none">Ana Sayfa</a> ·
+      <a href="?p=kvkk" style="color:#38C9C0;text-decoration:none">KVKK</a>
     </div>""", unsafe_allow_html=True)
+    st.stop()
+
+
+def kvkk_sayfasi():
+    st.markdown("""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{--navy:#0D1B35;--teal:#38C9C0;--teal2:#2BA8A1;--blue:#2756D6;--mid:#6B7A99;--light:#F0F4FA;}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--light);color:var(--navy);}
+nav{position:fixed;top:0;left:0;right:0;z-index:1000;padding:0 6%;
+  display:flex;align-items:center;justify-content:space-between;height:64px;
+  background:rgba(255,255,255,.92);backdrop-filter:blur(16px);
+  border-bottom:1px solid rgba(13,27,53,.07);}
+.nav-logo{font-family:Sora,sans-serif;font-size:22px;font-weight:800;letter-spacing:-.8px;color:var(--navy);text-decoration:none;}
+.nav-logo span{color:var(--teal);}
+.nav-back{font-size:13px;font-weight:500;color:var(--mid);text-decoration:none;
+  display:inline-flex;align-items:center;gap:6px;transition:color .2s;}
+.nav-back:hover{color:var(--navy);}
+.kvkk-wrap{max-width:820px;margin:96px auto 80px;padding:0 24px;}
+.kvkk-header{background:white;border-radius:24px;padding:48px;margin-bottom:32px;
+  border:1px solid rgba(13,27,53,.07);box-shadow:0 4px 24px rgba(13,27,53,.06);}
+.kvkk-tag{display:inline-block;background:rgba(56,201,192,.12);color:var(--teal2);
+  font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;
+  padding:5px 14px;border-radius:50px;margin-bottom:16px;}
+.kvkk-header h1{font-family:Sora,sans-serif;font-size:clamp(22px,3vw,34px);font-weight:800;
+  letter-spacing:-1px;color:var(--navy);margin-bottom:12px;}
+.kvkk-header p{font-size:14px;color:var(--mid);line-height:1.7;}
+.kvkk-card{background:white;border-radius:20px;padding:36px;margin-bottom:20px;
+  border:1px solid rgba(13,27,53,.07);box-shadow:0 2px 12px rgba(13,27,53,.04);}
+.kvkk-card h2{font-family:Sora,sans-serif;font-size:16px;font-weight:700;color:var(--navy);
+  margin-bottom:14px;display:flex;align-items:center;gap:10px;}
+.kvkk-num{width:28px;height:28px;border-radius:8px;flex-shrink:0;
+  background:linear-gradient(135deg,var(--teal),var(--blue));
+  display:flex;align-items:center;justify-content:center;
+  font-family:Sora,sans-serif;font-size:12px;font-weight:700;color:white;}
+.kvkk-card p,.kvkk-card li{font-size:14px;color:#3D4F70;line-height:1.75;}
+.kvkk-card ul{padding-left:20px;margin-top:8px;}
+.kvkk-card li{margin-bottom:6px;}
+.kvkk-card strong{color:var(--navy);}
+.kvkk-highlight{background:rgba(56,201,192,.07);border-left:3px solid var(--teal);
+  border-radius:0 12px 12px 0;padding:16px 20px;margin-top:12px;}
+.kvkk-highlight p{margin:0;}
+.kvkk-footer{text-align:center;font-size:12px;color:var(--mid);margin-top:40px;padding-bottom:40px;}
+.kvkk-footer a{color:var(--teal);text-decoration:none;}
+#MainMenu,footer,header,[data-testid="stToolbar"],[data-testid="stSidebar"],
+[data-testid="stHeader"],div[data-testid="collapsedControl"],button[kind="header"]{display:none!important;}
+</style>
+
+<nav>
+  <a class="nav-logo" href="?p=" target="_self">Reh<span>app</span></a>
+  <a class="nav-back" href="?p=" target="_self">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+      <path d="M19 12H5M12 5l-7 7 7 7"/>
+    </svg>
+    Ana Sayfa
+  </a>
+</nav>
+
+<div class="kvkk-wrap">
+  <div class="kvkk-header">
+    <div class="kvkk-tag">Yasal Bildirim</div>
+    <h1>KVKK Aydınlatma Metni</h1>
+    <p>6698 sayılı Kişisel Verilerin Korunması Kanunu kapsamında kişisel verilerinizin işlenmesine ilişkin aydınlatma metnidir. Son güncelleme: Ocak 2026.</p>
+  </div>
+
+  <div class="kvkk-card">
+    <h2><div class="kvkk-num">1</div>Veri Sorumlusu</h2>
+    <p>Kişisel verileriniz, <strong>Rehapp</strong> ("Şirket") tarafından veri sorumlusu sıfatıyla işlenmektedir.</p>
+    <div class="kvkk-highlight">
+      <p>İletişim: <strong>info@rehapp.com.tr</strong></p>
+    </div>
+  </div>
+
+  <div class="kvkk-card">
+    <h2><div class="kvkk-num">2</div>İşlenen Kişisel Veriler</h2>
+    <p>Platform kullanımı kapsamında aşağıdaki veriler işlenmektedir:</p>
+    <ul>
+      <li><strong>Kurum bilgileri:</strong> Kurum adı, e-posta adresi, şifre (şifrelenmiş)</li>
+      <li><strong>Öğrenci bilgileri (özel nitelikli kişisel veri):</strong> Ad-soyad, doğum tarihi, RAM rapor bitiş tarihi, tanı programları, eğitim modülleri</li>
+      <li><strong>Kullanım verileri:</strong> Oturum bilgileri, platform erişim kayıtları</li>
+    </ul>
+    <div class="kvkk-highlight">
+      <p>⚠️ Öğrencilere ait tanı ve sağlık bilgileri KVKK kapsamında <strong>özel nitelikli kişisel veri</strong> olarak sınıflandırılmaktadır. Bu veriler yalnızca hizmet sunumu amacıyla işlenmekte ve üçüncü taraflarla paylaşılmamaktadır.</p>
+    </div>
+  </div>
+
+  <div class="kvkk-card">
+    <h2><div class="kvkk-num">3</div>Kişisel Verilerin İşlenme Amaçları</h2>
+    <ul>
+      <li>Özel eğitim ve rehabilitasyon merkezi hizmetinin sunulması</li>
+      <li>Öğrenci grup planlaması ve eşleştirme özelliklerinin çalıştırılması</li>
+      <li>Kullanıcı hesabının yönetilmesi ve kimlik doğrulaması</li>
+      <li>Teknik destek ve müşteri hizmetlerinin sağlanması</li>
+      <li>Yasal yükümlülüklerin yerine getirilmesi</li>
+    </ul>
+  </div>
+
+  <div class="kvkk-card">
+    <h2><div class="kvkk-num">4</div>Hukuki Sebepler</h2>
+    <p>Kişisel verileriniz KVKK Madde 5 ve Madde 6 kapsamındaki aşağıdaki hukuki sebeplere dayanılarak işlenmektedir:</p>
+    <ul>
+      <li>Sözleşmenin kurulması veya ifası için gerekli olması</li>
+      <li>Açık rıza (özel nitelikli veriler için)</li>
+      <li>Meşru menfaat (platform güvenliği ve teknik işleyiş)</li>
+      <li>Yasal yükümlülük</li>
+    </ul>
+  </div>
+
+  <div class="kvkk-card">
+    <h2><div class="kvkk-num">5</div>Verilerin Aktarılması</h2>
+    <p>Kişisel verileriniz; yalnızca altyapı hizmeti sağlayan bulut hizmet sağlayıcılarına (sunucu barındırma), teknik destek amacıyla Şirket çalışanlarına aktarılmaktadır. Herhangi bir üçüncü taraf reklam veya analitik platformuyla paylaşılmamaktadır.</p>
+  </div>
+
+  <div class="kvkk-card">
+    <h2><div class="kvkk-num">6</div>Saklama Süresi</h2>
+    <p>Kişisel verileriniz, hizmet sözleşmesinin sona ermesinden itibaren <strong>2 yıl</strong> süreyle saklanmakta; bu sürenin sonunda güvenli biçimde silinmektedir. Yasal yükümlülük gerektiren veriler ilgili mevzuatta öngörülen süre boyunca tutulur.</p>
+  </div>
+
+  <div class="kvkk-card">
+    <h2><div class="kvkk-num">7</div>KVKK Madde 11 Kapsamındaki Haklarınız</h2>
+    <p>İlgili kişi olarak aşağıdaki haklara sahipsiniz:</p>
+    <ul>
+      <li>Kişisel verilerinizin işlenip işlenmediğini öğrenme</li>
+      <li>Kişisel verileriniz işlenmişse buna ilişkin bilgi talep etme</li>
+      <li>Kişisel verilerinizin işlenme amacını ve amacına uygun kullanılıp kullanılmadığını öğrenme</li>
+      <li>Yurt içinde veya yurt dışında aktarıldığı üçüncü kişileri bilme</li>
+      <li>Eksik veya yanlış işlenmiş verilerin düzeltilmesini isteme</li>
+      <li>Verilerin silinmesini veya yok edilmesini isteme</li>
+      <li>İşlenen verilerin münhasıran otomatik sistemler vasıtasıyla analiz edilmesi suretiyle aleyhinize bir sonucun ortaya çıkmasına itiraz etme</li>
+      <li>Kanuna aykırı işleme nedeniyle zarara uğramanız hâlinde zararın giderilmesini talep etme</li>
+    </ul>
+    <div class="kvkk-highlight">
+      <p>Bu haklarınızı kullanmak için <strong>info@rehapp.com.tr</strong> adresine yazabilirsiniz. Talepler 30 gün içinde yanıtlanır.</p>
+    </div>
+  </div>
+
+  <div class="kvkk-footer">
+    <p>© 2026 Rehapp &nbsp;·&nbsp; <a href="?p=" target="_self">Ana Sayfa</a> &nbsp;·&nbsp; <a href="#contact" onclick="window.location='?p='">Bize Ulaşın</a></p>
+  </div>
+</div>
+""", unsafe_allow_html=True)
     st.stop()
 
 
@@ -762,6 +957,8 @@ if not _token or not _kurum_id:
         sifre_sifirla_sayfasi()
     elif current_page == "login":
         login_sayfasi()
+    elif current_page == "kvkk":
+        kvkk_sayfasi()
     else:
         landing_sayfasi()
     st.stop()
