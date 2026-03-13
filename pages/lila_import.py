@@ -237,7 +237,9 @@ def show_import():
                 fazla   = f" ve {len(silinecekler)-5} kişi daha" if len(silinecekler) > 5 else ""
                 st.markdown(f"🗑️ **{len(silinecekler)}** öğrenci silinecek: {isimler}{fazla}")
         with c2:
-            if st.button("🚀 İçe Aktar", type="primary", use_container_width=True, key="lila_btn"):
+            if api.is_demo_mode():
+                st.warning("🎭 Demo hesapta içe aktarma yapılamaz.")
+            elif st.button("🚀 İçe Aktar", type="primary", use_container_width=True, key="lila_btn"):
                 _do_import(students, mevcut_names, silinecekler)
 
 def _do_import(students, mevcut_names, silinecekler):

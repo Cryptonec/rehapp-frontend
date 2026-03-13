@@ -211,30 +211,46 @@ def show():
     st.divider()
 
     # ── Yeni Öğrenci Ekle ─────────────────────────────────────────────────────
-    with st.expander("➕ Yeni Öğrenci Ekle"):
-        with st.form("new_student", clear_on_submit=True):
-            nc1, nc2, nc3 = st.columns(3)
-            with nc1:
-                name = st.text_input("Ad Soyad *")
-            with nc2:
-                dob = st.date_input("Doğum tarihi", value=None)
-            with nc3:
-                rapor = st.date_input("Rapor bitiş tarihi", value=None)
+    is_demo = api.is_demo_mode()
+    if is_demo:
+        from demo_data import DEMO_MAX_STUDENTS
+        user_count = len(st.session_state.get("demo_students", []))
+        if user_count >= DEMO_MAX_STUDENTS:
+            st.expander("➕ Yeni Öğrenci Ekle").warning(
+                f"Demo hesapta en fazla {DEMO_MAX_STUDENTS} öğrenci ekleyebilirsiniz. Limite ulaştınız."
+            )
+        else:
+            with st.expander(f"➕ Yeni Öğrenci Ekle ({user_count}/{DEMO_MAX_STUDENTS})"):
+                _yeni_ogrenci_formu(diag_map, mod_map)
+    else:
+        with st.expander("➕ Yeni Öğrenci Ekle"):
+            _yeni_ogrenci_formu(diag_map, mod_map)
 
-            sel_diags = st.multiselect("Tanılar", options=list(diag_map.keys()))
-            sel_mods  = st.multiselect("Modüller", options=list(mod_map.keys()))
 
-            if st.form_submit_button("✅ Kaydet", type="primary", use_container_width=True):
-                if not name.strip():
-                    st.warning("Ad alanı zorunlu.")
-                else:
-                    payload = {
-                        "name": name.strip(),
-                        "dob": dob.isoformat() if dob else None,
-                        "rapor_bitis": rapor.isoformat() if rapor else None,
-                        "diagnosis_ids": [diag_map[x] for x in sel_diags],
-                        "module_ids": [mod_map[x] for x in sel_mods],
-                    }
-                    if api.create_student(payload):
-                        st.success("Öğrenci eklendi!")
-                        st.rerun()
+def _yeni_ogrenci_formu(diag_map, mod_map):
+    with st.form("new_student", clear_on_submit=True):
+        nc1, nc2, nc3 = st.columns(3)
+        with nc1:
+            name = st.text_input("Ad Soyad *")
+        with nc2:
+            dob = st.date_input("Doğum tarihi", value=None)
+        with nc3:
+            rapor = st.date_input("Rapor bitiş tarihi", value=None)
+
+        sel_diags = st.multiselect("Tanılar", options=list(diag_map.keys()))
+        sel_mods  = st.multiselect("Modüller", options=list(mod_map.keys()))
+
+        if st.form_submit_button("✅ Kaydet", type="primary", use_container_width=True):
+            if not name.strip():
+                st.warning("Ad alanı zorunlu.")
+            else:
+                payload = {
+                    "name": name.strip(),
+                    "dob": dob.isoformat() if dob else None,
+                    "rapor_bitis": rapor.isoformat() if rapor else None,
+                    "diagnosis_ids": [diag_map[x] for x in sel_diags],
+                    "module_ids": [mod_map[x] for x in sel_mods],
+                }
+                if api.create_student(payload):
+                    st.success("Öğrenci eklendi!")
+                    st.rerun()
