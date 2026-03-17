@@ -83,8 +83,9 @@ def _load():
 def _onerici_hesapla(students, mods_by_id, diags_by_id, tani_filtre, grup_boyutu):
     """
     Seçili tanı ve grup boyutuna göre en ideal grupları hesaplar.
-    Kriter: ≥2 ortak modül, ≤4 yıl yaş farkı.
+    Önce ≥2 ortak modül aranır; hiç sonuç yoksa ≥1 ortak modüle düşülür.
     Puan = ortak_modül_sayısı * 10 - yaş_farkı * 2
+    Döner: (sonuclar, uygun_sayi, kullanilan_min_modul)
     """
     from pages.lila_import import TANI_MODUL_MAP
 
@@ -98,32 +99,39 @@ def _onerici_hesapla(students, mods_by_id, diags_by_id, tani_filtre, grup_boyutu
     ]
 
     if len(uygun) < grup_boyutu:
-        return [], len(uygun)
+        return [], len(uygun), 2
 
-    sonuclar = []
-    for kombo in combinations(uygun, grup_boyutu):
-        yaslar = [age_years(s["dob"]) for s in kombo]
-        yas_farki = max(yaslar) - min(yaslar)
-        if yas_farki > 4:
-            continue
+    def _tara(min_modul):
+        sonuclar = []
+        for kombo in combinations(uygun, grup_boyutu):
+            yaslar = [age_years(s["dob"]) for s in kombo]
+            yas_farki = max(yaslar) - min(yaslar)
+            if yas_farki > 4:
+                continue
+            mod_setleri = [mods_by_id.get(s["id"], frozenset()) & tani_modulleri for s in kombo]
+            ortak_modul = frozenset.intersection(*mod_setleri)
+            if len(ortak_modul) < min_modul:
+                continue
+            puan = len(ortak_modul) * 10 - yas_farki * 2
+            sonuclar.append({
+                "uyeler":      list(kombo),
+                "ortak_modul": ortak_modul,
+                "yas_farki":   round(yas_farki, 2),
+                "puan":        round(puan, 2),
+            })
+        sonuclar.sort(key=lambda x: (-x["puan"], x["yas_farki"]))
+        return sonuclar[:10]
 
-        # Ortak modüller — sadece seçili tanıya ait olanlar
-        mod_setleri = [mods_by_id.get(s["id"], frozenset()) & tani_modulleri for s in kombo]
-        ortak_modul = frozenset.intersection(*mod_setleri)
+    # Tanının toplam modül sayısı 1 ise doğrudan 1'den başla
+    baslangic = 1 if len(tani_modulleri) <= 1 else 2
 
-        if len(ortak_modul) < 2:
-            continue
+    sonuclar = _tara(baslangic)
+    if sonuclar:
+        return sonuclar, len(uygun), baslangic
 
-        puan = len(ortak_modul) * 10 - yas_farki * 2
-        sonuclar.append({
-            "uyeler":      list(kombo),
-            "ortak_modul": ortak_modul,
-            "yas_farki":   round(yas_farki, 2),
-            "puan":        round(puan, 2),
-        })
-
-    sonuclar.sort(key=lambda x: (-x["puan"], x["yas_farki"]))
-    return sonuclar[:10], len(uygun)
+    # Fallback: 1 ortak modül (sadece baslangic==2 iken buraya gelinir)
+    sonuclar = _tara(1)
+    return sonuclar, len(uygun), 1
 
 
 # ── Akıllı Öneri Sekmesi ──────────────────────────────────────────────────────
@@ -183,17 +191,19 @@ def _show_oneri(students, mods_by_id, diags_by_id):
 
     if st.button("🔍 Grupları Öner", key="onr_hesapla", type="primary", use_container_width=False):
         with st.spinner("Gruplar hesaplanıyor…"):
-            sonuclar, uygun_sayi = _onerici_hesapla(
+            sonuclar, uygun_sayi, min_modul = _onerici_hesapla(
                 students, mods_by_id, diags_by_id, tani_sec, grup_boyutu
             )
         st.session_state["_onr_sonuclar"]    = sonuclar
         st.session_state["_onr_uygun_sayi"]  = uygun_sayi
+        st.session_state["_onr_min_modul"]   = min_modul
         st.session_state["_onr_tani"]        = tani_sec
         st.session_state["_onr_boyut"]       = grup_boyutu
 
     # Sonuçları göster
     sonuclar   = st.session_state.get("_onr_sonuclar")
     uygun_sayi = st.session_state.get("_onr_uygun_sayi", 0)
+    min_modul  = st.session_state.get("_onr_min_modul", 2)
     onr_tani   = st.session_state.get("_onr_tani", "")
     onr_boyut  = st.session_state.get("_onr_boyut", 0)
 
@@ -209,14 +219,23 @@ def _show_oneri(students, mods_by_id, diags_by_id):
         else:
             st.warning(
                 "Kriterleri karşılayan grup bulunamadı. "
-                "(≥2 ortak modül ve ≤4 yıl yaş farkı koşullarını sağlayan kombinasyon yok)"
+                "(Yaş farkı ≤4 yıl koşulunu sağlayan yeterli öğrenci yok)"
             )
         return
 
+    from pages.lila_import import TANI_MODUL_MAP as _TM
+    _tani_mod_sayisi = len(_TM.get(onr_tani, []))
+    fallback_notu = (
+        '<div style="font-size:12px;color:#F59E0B;margin-bottom:8px;">'
+        '⚠️ 2 ortak modülle uyumlu grup bulunamadı — 1 ortak modülle önerildi, puanlar daha düşük.'
+        '</div>'
+        if min_modul == 1 and _tani_mod_sayisi > 1 else ""
+    )
     st.markdown(
-        f"<div style='font-size:13px;color:#6B7A99;margin-bottom:12px;'>"
+        f"<div style='font-size:13px;color:#6B7A99;margin-bottom:6px;'>"
         f"<b>{len(sonuclar)}</b> öneri bulundu · {uygun_sayi} uygun öğrenci tarandı"
-        f"</div>",
+        f"</div>"
+        f"{fallback_notu}",
         unsafe_allow_html=True,
     )
 
