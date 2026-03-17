@@ -474,7 +474,7 @@ div[data-testid="collapsedControl"]{display:none!important;}
     <div class="contact-card">
       <div class="contact-icon">✉️</div>
       <div class="contact-label">E-posta</div>
-      <div class="contact-val"><a href="mailto:info@rehapp.com.tr" class="contact-link">info@rehapp.com.tr</a></div>
+      <div class="contact-val"><a href="mailto:ncmakgn@gmail.com" class="contact-link">ncmakgn@gmail.com</a></div>
     </div>
     <div class="contact-card">
       <div class="contact-icon">⏱️</div>
@@ -497,7 +497,7 @@ div[data-testid="collapsedControl"]{display:none!important;}
   </div>
   <div class="footer-copy">
     © 2026 Rehapp &nbsp;·&nbsp;
-    <a href="mailto:info@rehapp.com.tr" class="footer-link">info@rehapp.com.tr</a>
+    <a href="mailto:ncmakgn@gmail.com" class="footer-link">ncmakgn@gmail.com</a>
   </div>
 </footer>
 """, unsafe_allow_html=True)
@@ -862,7 +862,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:1000;padding:0 6%;
     <h2><div class="kvkk-num">1</div>Veri Sorumlusu</h2>
     <p>Kişisel verileriniz, <strong>Rehapp</strong> ("Şirket") tarafından veri sorumlusu sıfatıyla işlenmektedir.</p>
     <div class="kvkk-highlight">
-      <p>İletişim: <strong>info@rehapp.com.tr</strong></p>
+      <p>İletişim: <strong>ncmakgn@gmail.com</strong></p>
     </div>
   </div>
 
@@ -925,7 +925,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:1000;padding:0 6%;
       <li>Kanuna aykırı işleme nedeniyle zarara uğramanız hâlinde zararın giderilmesini talep etme</li>
     </ul>
     <div class="kvkk-highlight">
-      <p>Bu haklarınızı kullanmak için <strong>info@rehapp.com.tr</strong> adresine yazabilirsiniz. Talepler 30 gün içinde yanıtlanır.</p>
+      <p>Bu haklarınızı kullanmak için <strong>ncmakgn@gmail.com</strong> adresine yazabilirsiniz. Talepler 30 gün içinde yanıtlanır.</p>
     </div>
   </div>
 
