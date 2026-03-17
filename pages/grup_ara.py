@@ -122,11 +122,14 @@ def _onerici_hesapla(students, mods_by_id, diags_by_id, tani_filtre, grup_boyutu
         sonuclar.sort(key=lambda x: (-x["puan"], x["yas_farki"]))
         return sonuclar[:10]
 
-    sonuclar = _tara(2)
-    if sonuclar:
-        return sonuclar, len(uygun), 2
+    # Tanının toplam modül sayısı 1 ise doğrudan 1'den başla
+    baslangic = 1 if len(tani_modulleri) <= 1 else 2
 
-    # Fallback: 1 ortak modül
+    sonuclar = _tara(baslangic)
+    if sonuclar:
+        return sonuclar, len(uygun), baslangic
+
+    # Fallback: 1 ortak modül (sadece baslangic==2 iken buraya gelinir)
     sonuclar = _tara(1)
     return sonuclar, len(uygun), 1
 
@@ -220,11 +223,13 @@ def _show_oneri(students, mods_by_id, diags_by_id):
             )
         return
 
+    from pages.lila_import import TANI_MODUL_MAP as _TM
+    _tani_mod_sayisi = len(_TM.get(onr_tani, []))
     fallback_notu = (
         '<div style="font-size:12px;color:#F59E0B;margin-bottom:8px;">'
         '⚠️ 2 ortak modülle uyumlu grup bulunamadı — 1 ortak modülle önerildi, puanlar daha düşük.'
         '</div>'
-        if min_modul == 1 else ""
+        if min_modul == 1 and _tani_mod_sayisi > 1 else ""
     )
     st.markdown(
         f"<div style='font-size:13px;color:#6B7A99;margin-bottom:6px;'>"
