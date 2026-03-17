@@ -195,11 +195,11 @@ def show():
                 if not (s_mods & mevcut_modler & ortak_tani_modulleri):
                     continue
 
-                # 3. Yaş uyumu — yeni üye eklenince max fark 3 yılı geçmemeli
+                # 3. Yaş uyumu — yeni üye eklenince max fark 4 yılı geçmemeli
                 s_yas = age_years(s.get("dob"))
                 if s_yas is None:
                     continue
-                if max(yas_max, s_yas) - min(yas_min, s_yas) > 3:
+                if max(yas_max, s_yas) - min(yas_min, s_yas) > 4:
                     continue
 
                 aday_isimler.append(s["name"])
@@ -275,8 +275,8 @@ def show():
                 uyarilar.append("⚠️ Ortak tanıya ait ortak modül yok — bu öğrenciler birlikte gruplanamaz.")
         if not ortak_modul:
             uyarilar.append("⚠️ Ortak modül yok — bu öğrenciler birlikte gruplanamaz.")
-        if yas_farki is not None and yas_farki > 3:
-            uyarilar.append(f"⚠️ Yaş farkı {yas_farki} yıl — 3 yılı aşıyor.")
+        if yas_farki is not None and yas_farki > 4:
+            uyarilar.append(f"⚠️ Yaş farkı {yas_farki} yıl — 4 yılı aşıyor.")
 
         if uyarilar:
             for u in uyarilar:
