@@ -10,7 +10,7 @@ import streamlit as st
 import logging
 
 logger = logging.getLogger(__name__)
-API_URL = os.environ.get("API_URL", "http://localhost:8000").rstrip("/")
+API_URL = os.environ.get("API_URL", "https://rehapp-backend.onrender.com").rstrip("/")
 
 
 def _headers():
