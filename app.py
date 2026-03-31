@@ -737,6 +737,7 @@ def login_sayfasi():
                 <div class="lb1"></div><div class="lb2"></div><div class="lb3"></div>
               </div>
               <div class="login-loading-text">Giriş yapılıyor...</div>
+              <div class="login-loading-text" style="margin-top:8px;font-size:11px;color:#9AA3B8;">Sunucu uyanıyor olabilir, lütfen bekleyin (30–60 sn)</div>
             </div>""", unsafe_allow_html=True)
             import time; time.sleep(0.4)
             try:
@@ -752,8 +753,11 @@ def login_sayfasi():
                 st.session_state["page"]        = "app"
                 st.rerun()
             else:
+                st.session_state["_login_error"] = "Giriş başarısız. E-posta/şifre hatalı veya sunucu yanıt vermedi, tekrar deneyin."
                 st.rerun()
         else:
+            if st.session_state.pop("_login_error", None):
+                st.error("Giriş başarısız. E-posta/şifre hatalı veya sunucu yanıt vermedi, tekrar deneyin.")
             with st.form("login_form", clear_on_submit=False):
                 email = st.text_input("E-posta", placeholder="ornek@kurum.com")
                 sifre = st.text_input("Şifre", type="password", placeholder="••••••••")
