@@ -50,7 +50,7 @@ def _demo_init():
 
 # ── Auth ─────────────────────────────────────────────────────────────────────
 def login(email, password):
-    return _handle(requests.post(f"{API_URL}/api/login", data={"username": email, "password": password}, timeout=70))
+    return _handle(requests.post(f"{API_URL}/api/login", data={"username": email, "password": password}, timeout=15))
 
 def register(ad, email, password):
     return _handle(requests.post(f"{API_URL}/api/register", json={"ad": ad, "email": email, "password": password}))

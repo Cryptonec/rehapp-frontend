@@ -737,7 +737,6 @@ def login_sayfasi():
                 <div class="lb1"></div><div class="lb2"></div><div class="lb3"></div>
               </div>
               <div class="login-loading-text">Giriş yapılıyor...</div>
-              <div class="login-loading-text" style="margin-top:8px;font-size:11px;color:#9AA3B8;">Sunucu uyanıyor olabilir, lütfen bekleyin (30–60 sn)</div>
             </div>""", unsafe_allow_html=True)
             import time; time.sleep(0.4)
             try:
