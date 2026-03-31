@@ -739,7 +739,10 @@ def login_sayfasi():
               <div class="login-loading-text">Giriş yapılıyor...</div>
             </div>""", unsafe_allow_html=True)
             import time; time.sleep(0.4)
-            data = api.login(st.session_state.get("_login_email",""), st.session_state.get("_login_sifre",""))
+            try:
+                data = api.login(st.session_state.get("_login_email",""), st.session_state.get("_login_sifre",""))
+            except Exception:
+                data = None
             st.session_state["login_loading"] = False
             if data and data.get("access_token"):
                 st.session_state["token"]       = data["access_token"]
@@ -747,6 +750,8 @@ def login_sayfasi():
                 st.session_state["kurum_ad"]    = data.get("kurum_ad", "")
                 st.session_state["kurum_email"] = st.session_state.get("_login_email", "")
                 st.session_state["page"]        = "app"
+                st.rerun()
+            else:
                 st.rerun()
         else:
             with st.form("login_form", clear_on_submit=False):
