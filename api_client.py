@@ -129,3 +129,33 @@ def admin_sil_kurum(kurum_id):
         return r.status_code == 200
     except Exception:
         return False
+    # ── BKDS Takip ───────────────────────────────────────────────────────────────
+
+def get_bkds_sso_url() -> str | None:
+    if is_demo_mode():
+        return None
+    resp = requests.get(f"{API_URL}/bkds/sso-url", headers=_headers(), timeout=10)
+    data = _handle(resp)
+    return data.get("redirect_url") if data else None
+
+
+def get_bkds_credentials() -> dict:
+    if is_demo_mode():
+        return {"bkds_email": None, "bkds_configured": False}
+    resp = requests.get(f"{API_URL}/kurum/bkds-credentials", headers=_headers(), timeout=8)
+    return _handle(resp) or {"bkds_email": None, "bkds_configured": False}
+
+
+def update_bkds_credentials(email: str, password: str) -> dict | None:
+    payload: dict = {}
+    if email:
+        payload["bkds_email"] = email
+    if password:
+        payload["bkds_password"] = password
+    resp = requests.patch(
+        f"{API_URL}/kurum/bkds-credentials",
+        json=payload,
+        headers=_headers(),
+        timeout=8,
+    )
+    return _handle(resp)
