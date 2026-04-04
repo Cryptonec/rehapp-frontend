@@ -130,6 +130,10 @@ def admin_sil_kurum(kurum_id):
 
     # ── BKDS Takip ───────────────────────────────────────────────────────────────
 
+def is_demo_mode() -> bool:
+    return bool(st.session_state.get("is_demo"))
+
+
 def get_bkds_sso_url() -> str | None:
     if is_demo_mode():
         return None
