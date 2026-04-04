@@ -85,9 +85,6 @@ def patch_saved_group(gid, payload):
 def delete_saved_group(gid):
     return requests.delete(f"{API_URL}/api/saved-groups/{gid}", headers=_headers()).status_code == 204
 
-# ── BKDS SSO ─────────────────────────────────────────────────────────────────
-def get_bkds_sso_url():
-    return _handle(requests.get(f"{API_URL}/bkds/sso-url", headers=_headers(), timeout=15))
 
 # ── Admin ─────────────────────────────────────────────────────────────────────
 def admin_get_kurumlar():
@@ -129,6 +126,8 @@ def admin_sil_kurum(kurum_id):
         return r.status_code == 200
     except Exception:
         return False
+
+
     # ── BKDS Takip ───────────────────────────────────────────────────────────────
 
 def get_bkds_sso_url() -> str | None:
