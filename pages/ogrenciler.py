@@ -1,195 +1,74 @@
-"""
-Öğrenciler sayfası.
-"""
 import streamlit as st
 from datetime import date
+import pandas as pd
+from io import BytesIO
 import api_client as api
-from pages import lila_import
-
-
-def rapor_durumu(rapor_bitis_str):
-    if not rapor_bitis_str:
-        return "", ""
-    try:
-        bitis = date.fromisoformat(rapor_bitis_str)
-        bugun = date.today()
-        kalan = (bitis - bugun).days
-        if kalan < 0:
-            return "🔴", f"{abs(kalan)} gün önce doldu"
-        elif kalan <= 30:
-            return "🟠", f"{kalan} gün kaldı"
-        elif kalan <= 60:
-            return "🟡", f"{kalan} gün kaldı"
-        else:
-            return "🟢", f"{kalan} gün kaldı"
-    except Exception:
-        return "", ""
 
 
 def show():
-    st.header("👤 Öğrenciler")
+    st.header("👨‍🎓 Öğrenciler")
 
-    lila_import.show_import()
-    st.divider()
+    students  = api.get_students()
+    diags     = api.get_diagnoses()
+    mods      = api.get_modules()
+    diag_map  = {d["name"]: d["id"] for d in diags}
+    mod_map   = {m["name"]: m["id"] for m in mods}
 
-    # Cache — arama yazarken her rerun'da API çağrısı yapma
-    bust = st.session_state.get("students_cache_bust", 0)
-    if st.session_state.get("_og_bust") != bust or "_og_students" not in st.session_state:
-        st.session_state["_og_students"] = api.get_students()
-        st.session_state["_og_diags"]    = api.get_diagnoses()
-        st.session_state["_og_mods"]     = api.get_modules()
-        st.session_state["_og_bust"]     = bust
-    students = st.session_state["_og_students"]
-    diags    = st.session_state["_og_diags"]
-    mods     = st.session_state["_og_mods"]
-    diag_map = {d["name"]: d["id"] for d in diags}
-    mod_map  = {m["name"]: m["id"] for m in mods}
+    is_demo = api.is_demo_mode()
 
-    # ── Arama / Filtre ────────────────────────────────────────────────────────
-    col_ara, col_filtre = st.columns([3, 1])
-    with col_ara:
-        arama = st.text_input("🔍 Öğrenci ara", placeholder="Ad ile ara...", label_visibility="collapsed", key="ogrenci_arama")
-    with col_filtre:
-        filtre = st.selectbox("Filtre", ["Tümü", "Raporu Biten", "30 Gün İçinde", "Normal"], label_visibility="collapsed")
-
-    # Alfabetik sırala
-    import unicodedata
-    def tr_key(s):
-        return unicodedata.normalize('NFC', s['name'].lower()).translate(
-            str.maketrans('çğışöüÇĞİŞÖÜ', 'cgisoucgisou'))
-    students = sorted(students, key=tr_key)
-
-    # Son import tarihini al (lila_import sonrası set edilir)
-    son_import = st.session_state.get('son_lila_import')
-
-    filtered = students
-    if arama:
-        import unicodedata as _ud
-        def _tr_lower(t):
-            # Türkçe büyük İ → i, I → ı, diğerleri normal
-            return t.replace('İ','i').replace('I','ı').lower()
-        def _norm(t):
-            return _ud.normalize('NFC', _tr_lower(t)).translate(
-                str.maketrans('çğışöü', 'cgisou'))
-        filtered = [s for s in filtered if _norm(arama) in _norm(s["name"])]
-    if filtre == "Raporu Biten":
-        filtered = [s for s in filtered if s.get("rapor_bitis") and (date.fromisoformat(s["rapor_bitis"]) < date.today())]
-    elif filtre == "30 Gün İçinde":
-        filtered = [s for s in filtered if s.get("rapor_bitis") and 0 <= (date.fromisoformat(s["rapor_bitis"]) - date.today()).days <= 30]
-    elif filtre == "Normal":
-        filtered = [s for s in filtered if s.get("rapor_bitis") and (date.fromisoformat(s["rapor_bitis"]) - date.today()).days > 30]
-
-    st.caption(f"Toplam **{len(filtered)}** öğrenci")
-
-    if not filtered:
-        st.info("Öğrenci bulunamadı.")
-    else:
-        # ── Tablo ─────────────────────────────────────────────────────────────
-        rows_html = ""
-        for i, s in enumerate(filtered, 1):
-            renk_emoji, etiket = rapor_durumu(s.get("rapor_bitis"))
-            tani_kisa = " / ".join(
-                d["name"].replace(" Olan Bireyler İçin Destek Eğitim Programı", "").strip()
-                for d in s.get("diagnoses", [])
-            ) or "–"
-            mod_tags = "".join(
-                f'<span style="display:inline-block;background:rgba(56,201,192,.12);color:#2B7A76;border-radius:4px;padding:1px 7px;margin:2px;font-size:11px;">{m["name"]}</span>'
-                for m in s.get("modules", [])
-            ) or "–"
-            etiket_html = f'<span style="font-size:11px;color:#6B7A99;margin-left:6px;">{etiket}</span>' if etiket else ""
-            # Yeni öğrenci rozeti
-            yeni_html = ""
-            if son_import and s.get("created_at"):
-                try:
-                    from datetime import timezone
-                    created = s["created_at"]
-                    if isinstance(created, str):
-                        from datetime import datetime as dt
-                        created = dt.fromisoformat(created.replace("Z","+00:00"))
-                    if isinstance(son_import, str):
-                        from datetime import datetime as dt
-                        son_import_dt = dt.fromisoformat(son_import)
-                    else:
-                        son_import_dt = son_import
-                    if created > son_import_dt:
-                        yeni_html = '<span style="font-size:11px;background:#38C9C0;color:white;border-radius:4px;padding:1px 6px;margin-left:6px;">🆕</span>'
-                except: pass
-            rows_html += f"""<tr style='border-bottom:1px solid rgba(26,43,76,.06);'>
-              <td style='padding:8px 12px;color:#6B7A99;font-size:12px;'>{renk_emoji} {i}</td>
-              <td style='padding:8px 12px;font-weight:600;color:#1A2B4C;font-size:13px;'>{s["name"]}{yeni_html}{etiket_html}</td>
-              <td style='padding:8px 12px;color:#1A2B4C;font-size:12px;'>{s.get("dob") or "–"}</td>
-              <td style='padding:8px 12px;color:#1A2B4C;font-size:12px;'>{s.get("rapor_bitis") or "–"}</td>
-              <td style='padding:8px 12px;font-size:12px;color:#1A2B4C;'>{tani_kisa}</td>
-              <td style='padding:8px 12px;'>{mod_tags}</td>
-            </tr>"""
-
-        st.markdown(f"""
-        <div style='overflow-x:auto;border-radius:12px;border:1px solid rgba(26,43,76,.08);margin-bottom:16px;'>
-        <table style='width:100%;border-collapse:collapse;font-family:DM Sans,sans-serif;'>
-          <thead><tr style='background:linear-gradient(135deg,#38C9C0,#2756D6);'>
-            {"".join(f'<th style="padding:10px 12px;color:white;font-family:Sora,sans-serif;font-size:12px;text-align:left;">{h}</th>' for h in ["#","Ad Soyad","Doğum","Rapor Bitiş","Tanı","Modüller"])}
-          </tr></thead>
-          <tbody style='background:white;'>{rows_html}</tbody>
-        </table></div>""", unsafe_allow_html=True)
-
-        # ── Düzenle / Sil ─────────────────────────────────────────────────────
-        s_map = {s["name"]: s for s in filtered}
-
-        def _on_secim():
-            lbl = st.session_state.get("duzenle_secim")
-            if lbl and lbl != "— Seçiniz —":
-                st.session_state["duzenle_id"] = s_map[lbl]["id"]
-            else:
-                st.session_state["duzenle_id"] = None
-
-        isim_listesi = [s["name"] for s in filtered]
-        secili_id    = st.session_state.get("duzenle_id")
-        secili_isim  = next((s["name"] for s in filtered if s["id"] == secili_id), None)
-
-        st.selectbox(
-            "✏️ Düzenlemek istediğiniz öğrenciyi seçin",
-            ["— Seçiniz —"] + isim_listesi,
-            index=(isim_listesi.index(secili_isim) + 1) if secili_isim in isim_listesi else 0,
-            key="duzenle_secim",
-            on_change=_on_secim,
+    # Demo bilgi bandı
+    if is_demo:
+        from demo_data import DEMO_MAX_STUDENTS
+        user_count = len(st.session_state.get("demo_students", []))
+        remaining  = DEMO_MAX_STUDENTS - user_count
+        st.info(
+            f"🎭 Demo hesap: {user_count}/{DEMO_MAX_STUDENTS} öğrenci eklediniz. "
+            f"{'Ekleyebileceğiniz öğrenci kalmadı.' if remaining == 0 else f'{remaining} öğrenci daha ekleyebilirsiniz.'}"
         )
 
-        if secili_id:
-            s = next((x for x in filtered if x["id"] == secili_id), None)
-            if s:
-                renk, etiket = rapor_durumu(s.get("rapor_bitis"))
-                st.markdown(
-                    f"<div style='background:white;border-radius:14px;border:1px solid rgba(26,43,76,.08);"
-                    f"padding:20px;margin-top:8px;'>",
-                    unsafe_allow_html=True,
-                )
-                with st.form(f"edit_{s['id']}"):
-                    fc1, fc2, fc3 = st.columns(3)
-                    with fc1:
-                        new_name = st.text_input("Ad Soyad", value=s["name"])
-                    with fc2:
-                        new_dob = st.date_input(
+    # ── Mevcut Öğrenciler ────────────────────────────────────────────────────
+    if not students:
+        st.info("Henüz öğrenci kaydı yok.")
+    else:
+        for s in students:
+            is_user_added = s["id"] >= 2000  # Demo: kullanıcının eklediği öğrenci
+
+            with st.expander(f"📋 {s['name']}" + (" *(sizin eklediğiniz)*" if is_demo and is_user_added else "")):
+                c1, c2, c3 = st.columns(3)
+                c1.write(f"**Doğum:** {s.get('dob') or '–'}")
+                c2.write(f"**Rapor bitiş:** {s.get('rapor_bitis') or '–'}")
+                c3.write(f"**Tanılar:** {', '.join(d['name'] for d in s.get('diagnoses', [])) or '–'}")
+                st.write(f"**Modüller:** {', '.join(m['name'] for m in s.get('modules', [])) or '–'}")
+
+                # Demo'da yalnızca kullanıcının eklediği öğrenciler düzenlenebilir/silinebilir
+                if is_demo and not is_user_added:
+                    st.caption("🔒 Demo öğrenciler salt-okunurdur.")
+                    continue
+
+                col_edit, col_del = st.columns([3, 1])
+
+                with col_edit:
+                    with st.form(f"edit_{s['id']}"):
+                        new_name = st.text_input("Ad", value=s["name"])
+                        new_dob  = st.date_input(
                             "Doğum tarihi",
                             value=date.fromisoformat(s["dob"]) if s.get("dob") else None,
                         )
-                    with fc3:
                         new_rapor = st.date_input(
                             "Rapor bitiş",
                             value=date.fromisoformat(s["rapor_bitis"]) if s.get("rapor_bitis") else None,
                         )
-                    sel_diags = st.multiselect(
-                        "Tanılar",
-                        options=list(diag_map.keys()),
-                        default=[d["name"] for d in s.get("diagnoses", [])],
-                    )
-                    sel_mods = st.multiselect(
-                        "Modüller",
-                        options=list(mod_map.keys()),
-                        default=[m["name"] for m in s.get("modules", [])],
-                    )
-                    btn1, btn2 = st.columns([3, 1])
-                    with btn1:
-                        if st.form_submit_button("💾 Güncelle", type="primary", use_container_width=True):
+                        sel_diags = st.multiselect(
+                            "Tanılar",
+                            options=list(diag_map.keys()),
+                            default=[d["name"] for d in s.get("diagnoses", [])],
+                        )
+                        sel_mods = st.multiselect(
+                            "Modüller",
+                            options=list(mod_map.keys()),
+                            default=[m["name"] for m in s.get("modules", [])],
+                        )
+                        if st.form_submit_button("💾 Güncelle"):
                             payload = {
                                 "name": new_name,
                                 "dob": new_dob.isoformat() if new_dob else None,
@@ -198,49 +77,49 @@ def show():
                                 "module_ids": [mod_map[x] for x in sel_mods],
                             }
                             if api.update_student(s["id"], payload):
-                                st.session_state["duzenle_id"] = None
                                 st.success("Güncellendi!")
                                 st.rerun()
-                    with btn2:
-                        if st.form_submit_button("🗑 Sil", use_container_width=True):
-                            if api.delete_student(s["id"]):
-                                st.session_state["duzenle_id"] = None
-                                st.rerun()
-                st.markdown("</div>", unsafe_allow_html=True)
+
+                with col_del:
+                    if st.button("🗑 Sil", key=f"del_st_{s['id']}"):
+                        if api.delete_student(s["id"]):
+                            st.success("Öğrenci silindi")
+                            st.rerun()
 
     st.divider()
 
-    # ── Yeni Öğrenci Ekle ─────────────────────────────────────────────────────
-    is_demo = api.is_demo_mode()
+    # ── Yeni Öğrenci Ekle ────────────────────────────────────────────────────
     if is_demo:
         from demo_data import DEMO_MAX_STUDENTS
         user_count = len(st.session_state.get("demo_students", []))
         if user_count >= DEMO_MAX_STUDENTS:
-            st.expander("➕ Yeni Öğrenci Ekle").warning(
-                f"Demo hesapta en fazla {DEMO_MAX_STUDENTS} öğrenci ekleyebilirsiniz. Limite ulaştınız."
+            st.subheader("➕ Yeni Öğrenci Ekle")
+            st.warning(
+                f"Demo hesapta en fazla {DEMO_MAX_STUDENTS} öğrenci ekleyebilirsiniz. "
+                "Limite ulaştınız."
             )
         else:
-            with st.expander(f"➕ Yeni Öğrenci Ekle ({user_count}/{DEMO_MAX_STUDENTS})"):
-                _yeni_ogrenci_formu(diag_map, mod_map)
+            st.subheader(f"➕ Yeni Öğrenci Ekle ({user_count}/{DEMO_MAX_STUDENTS})")
+            _show_add_form(diag_map, mod_map)
     else:
-        with st.expander("➕ Yeni Öğrenci Ekle"):
-            _yeni_ogrenci_formu(diag_map, mod_map)
+        st.subheader("➕ Yeni Öğrenci Ekle")
+        _show_add_form(diag_map, mod_map)
+
+    st.divider()
+
+    # ── Excel İçe Aktar ──────────────────────────────────────────────────────
+    _show_import_section(diag_map, mod_map, is_demo)
 
 
-def _yeni_ogrenci_formu(diag_map, mod_map):
+def _show_add_form(diag_map: dict, mod_map: dict):
     with st.form("new_student", clear_on_submit=True):
-        nc1, nc2, nc3 = st.columns(3)
-        with nc1:
-            name = st.text_input("Ad Soyad *")
-        with nc2:
-            dob = st.date_input("Doğum tarihi", value=None)
-        with nc3:
-            rapor = st.date_input("Rapor bitiş tarihi", value=None)
-
+        name  = st.text_input("Ad Soyad")
+        dob   = st.date_input("Doğum tarihi", value=None)
+        rapor = st.date_input("Rapor bitiş tarihi", value=None)
         sel_diags = st.multiselect("Tanılar", options=list(diag_map.keys()))
         sel_mods  = st.multiselect("Modüller", options=list(mod_map.keys()))
 
-        if st.form_submit_button("✅ Kaydet", type="primary", use_container_width=True):
+        if st.form_submit_button("Kaydet"):
             if not name.strip():
                 st.warning("Ad alanı zorunlu.")
             else:
@@ -254,3 +133,116 @@ def _yeni_ogrenci_formu(diag_map, mod_map):
                 if api.create_student(payload):
                     st.success("Öğrenci eklendi!")
                     st.rerun()
+
+
+def _show_import_section(diag_map: dict, mod_map: dict, is_demo: bool):
+    """Excel / CSV dosyasından öğrenci içe aktarma.
+
+    Beklenen sütunlar (Türkçe başlıklar):
+        Ad Soyad | Doğum Tarihi | Rapor Bitiş | Tanılar | Modüller
+
+    Demo modda: dosya önizlemesi gösterilir ama kayıt yapılmaz.
+    """
+    with st.expander("📥 Excel / CSV ile Toplu İçe Aktar"):
+        st.markdown(
+            "**Beklenen sütunlar:** `Ad Soyad` *(zorunlu)*, `Doğum Tarihi`, "
+            "`Rapor Bitiş`, `Tanılar` *(virgülle ayrılmış)*, `Modüller` *(virgülle ayrılmış)*"
+        )
+
+        uploaded = st.file_uploader(
+            "Dosya seçin (.xlsx veya .csv)",
+            type=["xlsx", "xls", "csv"],
+            key="import_uploader",
+        )
+
+        if not uploaded:
+            return
+
+        # Dosyayı oku
+        try:
+            if uploaded.name.endswith(".csv"):
+                df = pd.read_csv(uploaded)
+            else:
+                df = pd.read_excel(uploaded, engine="openpyxl")
+        except Exception as e:
+            st.error(f"Dosya okunamadı: {e}")
+            return
+
+        if df.empty:
+            st.warning("Dosya boş.")
+            return
+
+        # Zorunlu sütun kontrolü
+        if "Ad Soyad" not in df.columns:
+            st.error("Dosyada `Ad Soyad` sütunu bulunamadı.")
+            return
+
+        # Önizleme tablosu
+        st.markdown(f"**{len(df)} satır bulundu – önizleme:**")
+        st.dataframe(df, use_container_width=True)
+
+        if is_demo:
+            st.warning(
+                "🎭 **Demo hesapta içe aktarma yapılamaz.** "
+                "Yukarıdaki liste yalnızca önizleme amaçlıdır. "
+                "Öğrencileri gerçekten içe aktarmak için tam hesap oluşturun."
+            )
+            return
+
+        # Gerçek hesap: içe aktarma butonu
+        if st.button("⬆️ İçe Aktar", type="primary"):
+            success_count = 0
+            error_rows    = []
+
+            for idx, row in df.iterrows():
+                name = str(row.get("Ad Soyad", "")).strip()
+                if not name:
+                    error_rows.append(idx + 2)
+                    continue
+
+                # Tanı ID'leri
+                raw_diags = str(row.get("Tanılar", "") or "")
+                diag_ids  = [
+                    diag_map[t.strip()]
+                    for t in raw_diags.split(",")
+                    if t.strip() in diag_map
+                ]
+
+                # Modül ID'leri
+                raw_mods = str(row.get("Modüller", "") or "")
+                mod_ids  = [
+                    mod_map[m.strip()]
+                    for m in raw_mods.split(",")
+                    if m.strip() in mod_map
+                ]
+
+                dob_raw   = row.get("Doğum Tarihi")
+                rapor_raw = row.get("Rapor Bitiş")
+
+                def _to_iso(val):
+                    if val is None or (isinstance(val, float) and pd.isna(val)):
+                        return None
+                    try:
+                        return pd.to_datetime(val).date().isoformat()
+                    except Exception:
+                        return None
+
+                payload = {
+                    "name": name,
+                    "dob": _to_iso(dob_raw),
+                    "rapor_bitis": _to_iso(rapor_raw),
+                    "diagnosis_ids": diag_ids,
+                    "module_ids": mod_ids,
+                }
+                result = api.create_student(payload)
+                if result:
+                    success_count += 1
+                else:
+                    error_rows.append(idx + 2)
+
+            if success_count:
+                st.success(f"✅ {success_count} öğrenci başarıyla içe aktarıldı.")
+            if error_rows:
+                st.warning(f"⚠️ Şu satırlar atlandı (ad eksik veya hata): {error_rows}")
+            if success_count:
+                st.rerun()

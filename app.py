@@ -1084,9 +1084,10 @@ if st.session_state.get("is_demo"):
 
 # ── Sekmeler ──────────────────────────────────────────────────────────────────
 from pages import yonetim, ogrenciler, grup_ara, kaydedilen_gruplar, admin
+from pages import bkds_sekme
 
 is_admin = st.session_state.get("kurum_email", "") == "necmettinakgun@gmail.com"
-tab_labels = ["⚙️ Yönetim", "👤 Öğrenci", "🔎 Grup Oluştur", "⭐ Gruplar"]
+tab_labels = ["⚙️ Yönetim", "👤 Öğrenci", "🔎 Grup Oluştur", "⭐ Gruplar", "📊 BKDS"]
 if is_admin:
     tab_labels.append("🛡️ Admin")
 
@@ -1128,5 +1129,6 @@ with tabs[0]: yonetim.show()
 with tabs[1]: ogrenciler.show()
 with tabs[2]: grup_ara.show()
 with tabs[3]: kaydedilen_gruplar.show()
-if is_admin and len(tabs) > 4:
-    with tabs[4]: admin.show()
+with tabs[4]: bkds_sekme.show()
+if is_admin and len(tabs) > 5:
+    with tabs[5]: admin.show()
