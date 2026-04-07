@@ -9,7 +9,10 @@ def _render_bkds_section():
         st.info("Demo hesapta BKDS Takip bağlantısı kullanılamaz.")
         return
 
+try:
     creds = api.get_bkds_credentials()
+except Exception:
+    creds = {"bkds_email": None, "bkds_configured": False}
     configured = creds.get("bkds_configured", False)
 
     if configured:
