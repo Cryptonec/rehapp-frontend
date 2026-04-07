@@ -736,7 +736,7 @@ def login_sayfasi():
               <div class="login-balls">
                 <div class="lb1"></div><div class="lb2"></div><div class="lb3"></div>
               </div>
-              <div class="login-loading-text">Giriş yapılıyor...</div>
+              <div class="login-loading-text">Giriş yapılıyor... (ilk açılış 30 sn sürebilir)</div>
             </div>""", unsafe_allow_html=True)
             import time; time.sleep(0.4)
             try:
@@ -751,12 +751,7 @@ def login_sayfasi():
                 st.session_state["kurum_email"] = st.session_state.get("_login_email", "")
                 st.session_state["page"]        = "app"
                 st.rerun()
-            else:
-                st.session_state["_login_error"] = "Giriş başarısız. E-posta/şifre hatalı veya sunucu yanıt vermedi, tekrar deneyin."
-                st.rerun()
         else:
-            if st.session_state.pop("_login_error", None):
-                st.error("Giriş başarısız. E-posta/şifre hatalı veya sunucu yanıt vermedi, tekrar deneyin.")
             with st.form("login_form", clear_on_submit=False):
                 email = st.text_input("E-posta", placeholder="ornek@kurum.com")
                 sifre = st.text_input("Şifre", type="password", placeholder="••••••••")
@@ -1091,7 +1086,7 @@ if st.session_state.get("is_demo"):
 from pages import yonetim, ogrenciler, grup_ara, kaydedilen_gruplar, admin
 
 is_admin = st.session_state.get("kurum_email", "") == "necmettinakgun@gmail.com"
-tab_labels = ["⚙️ Yönetim", "👤 Öğrenci", "🔎 Grup Oluştur", "⭐ Gruplar"]
+tab_labels = ["👤 Öğrenci", "🔎 Grup Oluştur", "⭐ Gruplar", "📊 BKDS"]
 if is_admin:
     tab_labels.append("🛡️ Admin")
 
@@ -1129,9 +1124,9 @@ st.markdown(f"""<script>
 </script>""", unsafe_allow_html=True)
 
 tabs = st.tabs(tab_labels)
-with tabs[0]: yonetim.show()
-with tabs[1]: ogrenciler.show()
-with tabs[2]: grup_ara.show()
-with tabs[3]: kaydedilen_gruplar.show()
+with tabs[0]: ogrenciler.show()
+with tabs[1]: grup_ara.show()
+with tabs[2]: kaydedilen_gruplar.show()
+with tabs[3]: yonetim.show()
 if is_admin and len(tabs) > 4:
     with tabs[4]: admin.show()
