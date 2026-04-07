@@ -9,10 +9,11 @@ def _render_bkds_section():
         st.info("Demo hesapta BKDS Takip bağlantısı kullanılamaz.")
         return
 
-try:
-    creds = api.get_bkds_credentials()
-except Exception:
-    creds = {"bkds_email": None, "bkds_configured": False}
+    try:
+        creds = api.get_bkds_credentials()
+    except Exception:
+        creds = {"bkds_email": None, "bkds_configured": False}
+
     configured = creds.get("bkds_configured", False)
 
     if configured:
@@ -51,7 +52,7 @@ except Exception:
             new_password = st.text_input(
                 "BKDS Takip Şifresi",
                 type="password",
-                placeholder="Değiştirmek istemiyorsanız boş bırakın" if configured else "",
+                placeholder="Değiştirmek istemiyorsanız boş bırakın",
             )
             submitted = st.form_submit_button("Kaydet", type="primary")
 
@@ -65,6 +66,7 @@ except Exception:
                     st.rerun()
                 elif result:
                     st.warning("E-posta kaydedildi ancak şifre eksik.")
+
 
 
 def show():
