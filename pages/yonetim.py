@@ -40,14 +40,14 @@ def show():
         if configured:
             st.caption(f"Mevcut kullanıcı adı: **{creds.get('bkds_email')}**")
         else:
-            st.caption("bkds-takip uygulamasındaki kurum admin hesabını girin.")
+            st.caption("bkds.meb.gov.tr giriş bilgilerinizi girin.")
         with st.form("bkds_creds_form"):
             new_email = st.text_input(
-                "BKDS Takip Kullanıcı Adı",
+                "bkds.meb.gov.tr Kullanıcı Adı",
                 value=creds.get("bkds_email") or "",
             )
             new_password = st.text_input(
-                "BKDS Takip Şifresi",
+                "bkds.meb.gov.tr Şifresi",
                 type="password",
             )
             submitted = st.form_submit_button("Kaydet", type="primary")
