@@ -10,9 +10,9 @@ def _render_bkds_section():
         return
 
     try:
-        creds = api.get_bkds_credentials()
+        creds = api.get_bkds_credentials() or {}
     except Exception:
-        creds = {"bkds_email": None, "bkds_configured": False}
+        creds = {}
 
     configured = creds.get("bkds_configured", False)
 
@@ -39,10 +39,10 @@ def _render_bkds_section():
         "🔧 BKDS giriş bilgilerini güncelle" if configured else "🔧 BKDS giriş bilgilerini gir",
         expanded=not configured,
     ):
-        st.caption(
-            f"Mevcut e-posta: **{creds['bkds_email']}**" if configured else
-            "bkds-takip uygulamasındaki kurum admin hesabını girin."
-        )
+        if configured:
+            st.caption(f"Mevcut e-posta: **{creds.get('bkds_email')}**")
+        else:
+            st.caption("bkds-takip uygulamasındaki kurum admin hesabını girin.")
         with st.form("bkds_creds_form"):
             new_email = st.text_input(
                 "BKDS Takip E-posta",
@@ -66,7 +66,6 @@ def _render_bkds_section():
                     st.rerun()
                 elif result:
                     st.warning("E-posta kaydedildi ancak şifre eksik.")
-
 
 
 def show():
